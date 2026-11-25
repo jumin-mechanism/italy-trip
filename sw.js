@@ -1,11 +1,11 @@
 // 이탈리아 여행 앱 서비스 워커: 앱 파일·지도 타일·글꼴을 저장해 오프라인에서도 열리게 함
-const SHELL_V = 'trip-shell-v1', TILES = 'tiles-v1', FONTS = 'fonts-v1';
+const SHELL_V = 'trip-shell-v2', TILES = 'tiles-v2', FONTS = 'fonts-v1';
 const SHELL = ['./', 'index.html', 'data.json', 'manifest.webmanifest',
   'vendor/leaflet.js', 'vendor/leaflet.css', 'vendor/leaflet-geoman.min.js', 'vendor/leaflet-geoman.css',
   'vendor/images/marker-icon.png', 'vendor/images/marker-icon-2x.png', 'vendor/images/marker-shadow.png',
   'vendor/images/layers.png', 'vendor/images/layers-2x.png',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
-const TILE_HOSTS = ['basemaps.cartocdn.com', 'tile.openstreetmap.org'];
+const TILE_HOSTS = ['tile.openstreetmap.org', 'tile.openstreetmap.fr'];
 const MAX_TILES = 5000;
 
 self.addEventListener('install', e => {

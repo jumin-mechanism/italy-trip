@@ -345,9 +345,8 @@ const CATS=['숙소','식당','카페','관광','교통','기타'];
 const CAT_COLOR={'숙소':'#16212b','식당':'#c96a1b','카페':'#8a5a2b','관광':'#1f6aa8','교통':'#5b6770','기타':'#7a4fa3'};
 const DRAW_COLORS=['#2f6fb0','#c0562f','#0f766e','#7a4fa3','#c9a21b','#16212b'];
 const TILES={
-  voyager:{name:'CARTO 보이저 (기본)',url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',sub:'abcd',max:20},
-  osm:{name:'OpenStreetMap 표준',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',sub:'',max:19},
-  positron:{name:'CARTO 밝은 회색',url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',sub:'abcd',max:20}
+  osm:{name:'OpenStreetMap 표준 (기본)',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',sub:'',max:19},
+  hot:{name:'OpenStreetMap 인도주의',url:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, 스타일 <a href="https://www.hotosm.org/">HOT</a>',sub:'abc',max:19}
 };
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -469,7 +468,7 @@ const fmtKm=m=>m>=1000?(m/1000).toFixed(1)+'km':Math.round(m)+'m';
 
 /* ---------- map ---------- */
 let map, tileLayer, placeLayer, stopLayer, drawLayer, meLayer;
-function tileCfg(){ const k=lsGet(TILE_KEY)||'voyager'; return TILES[k]?Object.assign({key:k},TILES[k]):Object.assign({key:'voyager'},TILES.voyager); }
+function tileCfg(){ const k=lsGet(TILE_KEY)||'osm'; return TILES[k]?Object.assign({key:k},TILES[k]):Object.assign({key:'osm'},TILES.osm); }
 function buildMap(){
   map=L.map('map',{zoomControl:true,preferCanvas:false,tap:true}).setView(CITY.rome.center,14);
   setTiles();
@@ -755,7 +754,7 @@ $('#m-offline').onclick=async()=>{
   if(!('caches' in window)){toast('이 브라우저는 오프라인 저장을 지원하지 않아요');return}
   const urls=tileUrls();
   if(urls.length>450){toast(`범위가 넓어요 (${urls.length}장). 지도를 더 확대한 뒤 다시 눌러 주세요.`);return}
-  const cache=await caches.open('tiles-v1'); let done=0,fail=0;
+  const cache=await caches.open('tiles-v2'); let done=0,fail=0;
   for(let i=0;i<urls.length;i+=6){
     await Promise.all(urls.slice(i,i+6).map(async u=>{ try{ if(await cache.match(u)){done++;return} const res=await fetch(u,{mode:'cors'}); if(res.ok){await cache.put(u,res.clone());done++} else fail++; }catch(e){fail++} }));
     toast(`지도 저장 중 ${done+fail}/${urls.length}`,true);
