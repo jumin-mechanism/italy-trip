@@ -167,11 +167,15 @@ button{cursor:pointer}
 .dr .sub{display:block;font-size:12px;color:var(--ink-3);font-weight:400}
 
 /* map markers */
-.pin{width:26px;height:26px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:var(--c,#b0402f);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center}
-.pin span{transform:rotate(45deg);color:#fff;font:600 11px/1 var(--mono)}
+.pin{width:34px;height:34px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:var(--c,#b0402f);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center}
+.pin span{transform:rotate(45deg);color:#fff;font:700 13px/1 var(--mono)}
 .pin.fixed{outline:3px solid rgba(15,118,110,.55)}
-.pdot{width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);opacity:.9}
-.pdot.dim{opacity:.55;transform:scale(.85)}
+.pdot{width:22px;height:22px;border-radius:50%;background:var(--c);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);display:grid;place-items:center;color:#fff;font:700 11px/1 var(--font)}
+.pdot.dim{opacity:.7}
+.leaflet-tooltip.nm{display:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:600 12px/1.25 var(--font);padding:2px 6px;box-shadow:var(--shadow);white-space:nowrap}
+.leaflet-tooltip.nm::before{display:none}
+#map.z-stop .leaflet-tooltip.nm.stop{display:block}
+#map.z-all .leaflet-tooltip.nm{display:block}
 .leaflet-popup-content{font:14px/1.45 var(--font);margin:12px 14px;min-width:190px}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .pop h4{margin:0 0 2px;font-size:15px}
@@ -342,6 +346,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','카페','관광','교통','기타'];
+const CAT_GLYPH={'숙소':'숙','식당':'식','카페':'카','관광':'관','교통':'역','기타':'·'};
 const CAT_COLOR={'숙소':'#16212b','식당':'#c96a1b','카페':'#8a5a2b','관광':'#1f6aa8','교통':'#5b6770','기타':'#7a4fa3'};
 const DRAW_COLORS=['#2f6fb0','#c0562f','#0f766e','#7a4fa3','#c9a21b','#16212b'];
 const TILES={
@@ -487,14 +492,16 @@ function buildMap(){
   });
   map.on('pm:remove',e=>{ const id=e.layer._drawId; if(!id) return; delDrawing(id); });
   map.on('contextmenu',e=>{ addPlaceAt(e.latlng); });
+  map.on('zoomend',updLbl); updLbl();
 }
 function setTiles(){
   const c=tileCfg(); if(tileLayer) map.removeLayer(tileLayer);
   tileLayer=L.tileLayer(c.url,{attribution:c.attr,subdomains:c.sub||'abc',maxZoom:c.max,detectRetina:false,crossOrigin:true}).addTo(map);
   $('#m-tiles-sub').textContent=c.name;
 }
-function pinIcon(n,color,fixed){ return L.divIcon({className:'',html:`<div class="pin ${fixed?'fixed':''}" style="--c:${color}"><span>${n}</span></div>`,iconSize:[26,26],iconAnchor:[4,26],popupAnchor:[9,-24]}); }
-function dotIcon(color,dim){ return L.divIcon({className:'',html:`<div class="pdot ${dim?'dim':''}" style="--c:${color}"></div>`,iconSize:[12,12],iconAnchor:[6,6],popupAnchor:[0,-6]}); }
+function pinIcon(n,color,fixed){ return L.divIcon({className:'',html:`<div class="pin ${fixed?'fixed':''}" style="--c:${color}"><span>${n}</span></div>`,iconSize:[34,34],iconAnchor:[5,34],popupAnchor:[12,-32]}); }
+function dotIcon(color,dim,glyph){ return L.divIcon({className:'',html:`<div class="pdot ${dim?'dim':''}" style="--c:${color}">${glyph||''}</div>`,iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-11]}); }
+function updLbl(){ const z=map.getZoom(), el=map.getContainer(); el.classList.toggle('z-stop',z>=13); el.classList.toggle('z-all',z>=16); }
 function cityColor(c){ return getComputedStyle(document.documentElement).getPropertyValue('--'+c).trim()||'#b0402f'; }
 function placePopup(p){
   const its=S.items.filter(i=>i.place===p.id).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
@@ -512,7 +519,7 @@ function renderPlacesLayer(){
   for(const p of S.places){
     if(used.has(p.id)) continue;
     const show=ui.allpl?(p.city===d.city||p.cat==='교통'):false; if(!show) continue;
-    const m=L.marker([p.lat,p.lng],{icon:dotIcon(CAT_COLOR[p.cat]||'#777',p.conf==='미확인'),pmIgnore:true,keyboard:false,title:p.name}).bindPopup(()=>placePopup(p),{maxWidth:280});
+    const m=L.marker([p.lat,p.lng],{icon:dotIcon(CAT_COLOR[p.cat]||'#777',p.conf==='미확인',CAT_GLYPH[p.cat]),pmIgnore:true,keyboard:false,title:p.name}).bindPopup(()=>placePopup(p),{maxWidth:280}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[12,0],className:'nm'});
     m.addTo(placeLayer); markers[p.id]=m;
   }
 }
@@ -523,7 +530,7 @@ function renderStops(){
     const p=i.place&&placeById(i.place); if(!p) continue; n++;
     pts.push([p.lat,p.lng]);
     if(seen[p.id]){ seen[p.id].label+=','+n; seen[p.id].m.setIcon(pinIcon(seen[p.id].label,col,seen[p.id].fixed||i.status==='fixed')); continue; }
-    const m=L.marker([p.lat,p.lng],{icon:pinIcon(n,col,i.status==='fixed'),pmIgnore:true,zIndexOffset:500,title:p.name}).bindPopup(()=>placePopup(p),{maxWidth:280}).addTo(stopLayer);
+    const m=L.marker([p.lat,p.lng],{icon:pinIcon(n,col,i.status==='fixed'),pmIgnore:true,zIndexOffset:500,title:p.name}).bindPopup(()=>placePopup(p),{maxWidth:280}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[14,-20],className:'nm stop'}).addTo(stopLayer);
     seen[p.id]={m,label:String(n),fixed:i.status==='fixed'}; markers[p.id]=m;
   }
   if(ui.line&&pts.length>1) L.polyline(pts,{color:col,weight:3,opacity:.75,dashArray:'2 8',lineCap:'round',pmIgnore:true,interactive:false}).addTo(stopLayer);
