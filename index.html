@@ -213,7 +213,14 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 .menu-list button:hover{background:var(--surface-2)}
 .sect{font-size:12px;letter-spacing:.06em;color:var(--ink-3);margin:10px 0 0;font-weight:600}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:9px 14px;border-radius:10px;font-size:13.5px;font-weight:500;z-index:2000;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
-@media (prefers-reduced-motion:no-preference){.toast{transition:opacity .2s}}
+.toast{display:flex;align-items:center;gap:10px}
+.toast button{flex:none;background:none;border:1px solid currentColor;border-radius:7px;color:inherit;padding:2px 9px;font-weight:600;font-size:13px}
+.backup{font-size:13px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:0 0 12px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.backup span{min-width:0}
+.backup button{flex:none}
+.ver{font-size:12px;color:var(--ink-3)}
+#s-results{max-height:46vh;overflow-y:auto}
+.dlg .hint{font-size:12.5px;color:var(--ink-2);margin:0}
 </style>
 </head>
 <body data-city="rome">
@@ -315,6 +322,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
     <div class="menu-list">
       <button type="button" id="m-export">여행 파일 보내기<small>지금 일정·장소·그린 경로를 파일 하나로 저장하거나 카톡 등으로 공유</small></button>
       <button type="button" id="m-import">받은 여행 파일 합치기<small>상대가 보낸 파일을 내 것과 합쳐요 (더 최근에 고친 쪽이 남아요)</small></button>
+      <button type="button" id="m-sync">자동 동기화<small id="m-sync-sub"></small></button>
     </div>
     <div class="sect">구글어스 · 마이맵스</div>
     <div class="menu-list">
@@ -323,7 +331,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
     </div>
     <div class="sect">오프라인</div>
     <div class="menu-list">
-      <button type="button" id="m-offline">지금 보이는 지도 저장<small>현재 화면과 두 단계 확대까지 저장해서 인터넷 없이도 보여요</small></button>
+      <button type="button" id="m-offline">오프라인 저장 상태<small>앱과 지도가 이 기기에 저장됐는지 확인해요. 지도는 직접 본 곳만 저장돼요</small></button>
       <button type="button" id="m-tiles">지도 스타일<small id="m-tiles-sub"></small></button>
     </div>
     <div class="sect">기타</div>
@@ -331,8 +339,31 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
       <button type="button" id="m-theme">화면 테마<small id="m-theme-sub"></small></button>
       <button type="button" id="m-reset">처음 데이터로 되돌리기<small>서버의 data.json으로 다시 시작해요 (이 기기의 수정 내용은 사라져요)</small></button>
     </div>
-    <div class="foot"><span></span><div class="row"><button type="button" class="btn" id="menu-close">닫기</button></div></div>
+    <div class="foot"><span class="ver" id="app-ver"></span><div class="row"><button type="button" class="btn" id="menu-close">닫기</button></div></div>
   </div>
+</dialog>
+<dialog id="dlg-search">
+  <form class="dlg" method="dialog" id="search-form">
+    <h3>이름으로 장소 찾기</h3>
+    <div class="row" style="flex-wrap:nowrap"><input id="s-q" type="search" placeholder="예: Trattoria Sostanza" autocomplete="off" style="flex:1;min-width:0"><button type="submit" class="btn primary">찾기</button></div>
+    <p class="hint">이탈리아어나 영어 이름이 잘 찾아져요. 인터넷이 필요해요.</p>
+    <div id="s-results"></div>
+    <div class="foot"><span></span><div class="row"><button type="button" class="btn" id="search-cancel">닫기</button></div></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-sync">
+  <form class="dlg" method="dialog" id="sync-form">
+    <h3>자동 동기화</h3>
+    <p class="hint">동기화 서버(README의 server-sync 참고)를 띄운 뒤, 두 폰에 같은 주소와 코드를 넣으면 고친 내용이 자동으로 맞춰져요.</p>
+    <label>서버 주소<input id="y-url" type="url" placeholder="https://example.com/api/trip-sync/our-trip" autocomplete="off" autocapitalize="off"></label>
+    <label>코드<input id="y-code" type="password" autocomplete="off"></label>
+    <p class="hint" id="y-msg"></p>
+    <div class="foot">
+      <button type="button" class="btn danger" id="sync-off">끄기</button>
+      <div class="row"><button type="button" class="btn" id="sync-cancel">취소</button><button type="submit" class="btn primary">연결</button></div>
+    </div>
+  </form>
 </dialog>
 <input type="file" id="file-json" accept=".json,application/json" hidden>
 <input type="file" id="file-kml" accept=".kml,.xml,application/vnd.google-earth.kml+xml" hidden>
@@ -343,7 +374,8 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui';
+const APP_VER='2026.11.26';
+const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','카페','관광','교통','기타'];
 const CAT_GLYPH={'숙소':'숙','식당':'식','카페':'카','관광':'관','교통':'역','기타':'·'};
@@ -367,13 +399,37 @@ try{Object.assign(ui,JSON.parse(lsGet(UI_KEY)||'{}'))}catch(e){}
 /* ---------- state ---------- */
 function normalize(d){
   d.items=d.items||[];d.places=d.places||[];d.drawings=d.drawings||[];d.deleted=d.deleted||{};
-  const t=d.seededAt||now();
+  const t=d.stamp||d.seededAt||now();
   for(const a of [d.items,d.places,d.drawings]) for(const x of a){ if(!x.id) x.id=uid('x'); if(!x.u) x.u=t; }
   return d;
 }
+// data.json이 새 버전이면, 이 기기에서 손대지 않은 항목만 새 내용으로 바꾸고 새 항목을 더함
+async function upgradeSeed(){
+  let seed; try{ const r=await fetch('data.json',{cache:'no-cache'}); if(!r.ok) return; seed=await r.json(); }catch(e){ return }
+  if(!(seed.version>(S.version||1))) return;
+  const stamp=seed.stamp||now(), stamps=S.stamps||[]; let n=0;
+  const untouched=x=>x.u===S.seededAt||stamps.includes(x.u);
+  const strip=o=>{ const c=Object.assign({},o); delete c.u; return JSON.stringify(c,Object.keys(c).sort()); };
+  for(const key of ['items','places','drawings']){
+    const cur=new Map(S[key].map(x=>[x.id,x]));
+    for(const sx of seed[key]||[]){
+      const lx=cur.get(sx.id);
+      if(!lx){ if(!S.deleted[sx.id]){ S[key].push(Object.assign({},sx,{u:stamp})); n++; } }
+      else if(untouched(lx)&&strip(lx)!==strip(sx)){ for(const k of Object.keys(lx)) delete lx[k]; Object.assign(lx,sx,{u:stamp}); n++; }
+    }
+    for(const id of seed.removed||[]){
+      const lx=cur.get(id); if(!lx||!untouched(lx)||S.items.some(i=>i.place===id)) continue;
+      S[key]=S[key].filter(x=>x.id!==id); S.deleted[id]=stamp; n++;
+    }
+  }
+  S.days=seed.days; S.title=seed.title; S.version=seed.version; S.stamps=stamps.concat(stamp);
+  if(!ui.day||!S.days.find(d=>d.date===ui.day)) ui.day=S.days[0]&&S.days[0].date;
+  save(true); markDirty(); renderAll();
+  if(n) toast(`일정 데이터를 새 버전으로 맞췄어요 · ${n}건`,{ms:5000});
+}
 async function loadSeed(){
   const r=await fetch('data.json',{cache:'no-cache'}); if(!r.ok) throw new Error('data.json '+r.status);
-  const d=await r.json(); d.seededAt=now(); return normalize(d);
+  const d=await r.json(); d.seededAt=now(); if(d.stamp) d.stamps=[d.stamp]; delete d.removed; return normalize(d);
 }
 async function init(){
   const raw=lsGet(KEY);
@@ -382,6 +438,9 @@ async function init(){
   if(!S.days||!S.days.length){ S.days=[] }
   if(!ui.day||!S.days.find(d=>d.date===ui.day)) ui.day=pickToday()||(S.days[0]&&S.days[0].date);
   applyTheme(); buildMap(); renderAll(); fitDay();
+  $('#app-ver').textContent='버전 '+APP_VER;
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
+  await upgradeSeed(); syncLabel(); syncNow();
 }
 let saveT=null;
 function save(quiet){
@@ -391,7 +450,9 @@ function save(quiet){
   if(!ok){el.textContent='저장 실패'; return}
   const d=new Date(S.savedAt); el.textContent=quiet?'':('저장됨 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'));
 }
-function commit(){ clearTimeout(saveT); saveT=setTimeout(()=>save(),150); }
+let meta={n:0,last:0}; try{ Object.assign(meta,JSON.parse(lsGet(META_KEY)||'{}')); }catch(e){}
+function markDirty(){ if(!sync) return; sync.dirty=true; syncSeq++; lsSet(SYNC_KEY,JSON.stringify(sync)); clearTimeout(syncT); syncT=setTimeout(syncNow,1500); }
+function commit(){ clearTimeout(saveT); saveT=setTimeout(()=>save(),150); meta.n++; lsSet(META_KEY,JSON.stringify(meta)); markDirty(); }
 function saveUI(){ lsSet(UI_KEY,JSON.stringify({day:ui.day,tab:ui.tab,line:ui.line,allpl:ui.allpl,cat:ui.cat})); }
 function pickToday(){
   try{
@@ -437,6 +498,7 @@ function renderPlan(){
    <div class="dayhead"><h2>${fmtDay(d)} (${esc(d.dow)})</h2><span class="city">${esc(d.label)}</span></div>
    ${lod&&d.date!=='12-31'?`<p class="lodging">숙소 · <a href="#" data-fly="${lod.id}">${esc(lod.name)}</a></p>`:''}
    ${d.note?`<div class="daynote"><b>메모</b><span>${esc(d.note)}</span></div>`:''}
+   ${!sync&&meta.n>=10?`<div class="backup"><span>마지막 백업 뒤로 ${meta.n}번 고쳤어요. 이 기기에만 저장돼 있어요.</span><button type="button" class="icon-btn" id="backup-now">백업</button></div>`:''}
    ${items.length?`<ol class="tl">${items.map(i=>{
       const p=i.place&&placeById(i.place); if(p) n++;
       const st=i.status||'plan';
@@ -459,7 +521,7 @@ function renderPlaces(){
     <button type="button" class="pl" data-fly="${p.id}" style="--cat:${CAT_COLOR[p.cat]||'#777'}"><span class="sw"></span>
     <span class="nm">${esc(p.name)}${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
     <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button>`).join('')}</div>`).join(''):'<p class="empty">조건에 맞는 장소가 없어요.</p>';
-  $('#place-list').insertAdjacentHTML('beforeend','<p class="help" style="margin-top:14px">새 장소는 지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)하면 추가돼요.</p>');
+  $('#place-list').insertAdjacentHTML('beforeend','<button type="button" class="btn wide" id="open-search">+ 이름으로 장소 찾아 추가</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
 }
 function renderDraw(){
   const d=day(); if(!d) return;
@@ -506,6 +568,7 @@ function cityColor(c){ return getComputedStyle(document.documentElement).getProp
 function placePopup(p){
   const its=S.items.filter(i=>i.place===p.id).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   return `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(p.cat)}${p.conf&&p.conf!=='확인'?' · '+esc(p.conf):''}${p.note?' · '+esc(p.note):''}</div>
+   ${p.conf==='미확인'?'<div class="sub">구글맵에서 이름을 확인한 뒤 수정을 눌러 바꿔 주세요.</div>':''}
    ${its.length?`<div class="sub">${its.map(i=>esc(i.date.replace('-','/').replace(/^0/,''))+' '+esc(i.time)+' '+esc(i.title)).join('<br>')}</div>`:''}
    <div class="acts"><a href="${mapsUrl(p)}" target="_blank" rel="noopener">구글맵</a><a href="${dirUrl(p)}" target="_blank" rel="noopener">길찾기</a>
    <button type="button" data-addat="${p.id}">이 날 일정에 추가</button><button type="button" data-editpl="${p.id}">수정</button></div></div>`;
@@ -602,7 +665,8 @@ $('#item-form').addEventListener('submit',e=>{
   commit(); $('#dlg-item').close(); if(rec.date!==ui.day){ui.day=rec.date;saveUI();} renderAll(); toast('저장했어요');
 });
 $('#item-cancel').onclick=()=>$('#dlg-item').close();
-$('#item-del').onclick=()=>{ if(!editItem) return; S.items=S.items.filter(i=>i.id!==editItem); S.deleted[editItem]=now(); commit(); $('#dlg-item').close(); renderAll(); toast('일정을 지웠어요'); };
+$('#item-del').onclick=()=>{ if(!editItem) return; const rec=S.items.find(i=>i.id===editItem); S.items=S.items.filter(i=>i.id!==editItem); S.deleted[editItem]=now(); commit(); $('#dlg-item').close(); renderAll();
+  toast('일정을 지웠어요',{undo:()=>{ delete S.deleted[rec.id]; rec.u=now(); S.items.push(rec); commit(); renderAll(); }}); };
 
 /* ---------- dialogs: drawing ---------- */
 let editDraw=null, drawColor=DRAW_COLORS[0], drawIsNew=false;
@@ -617,22 +681,26 @@ $('#d-colors').addEventListener('click',e=>{const b=e.target.closest('button');i
 $('#draw-form').addEventListener('submit',e=>{e.preventDefault();const x=S.drawings.find(z=>z.id===editDraw);if(!x)return;x.label=$('#d-label').value.trim();x.color=drawColor;x.date=$('#d-date').value;x.u=now();commit();$('#dlg-draw').close();renderAll();});
 $('#draw-cancel').onclick=()=>$('#dlg-draw').close();
 $('#draw-del').onclick=()=>{ delDrawing(editDraw); $('#dlg-draw').close(); };
-function delDrawing(id){ S.drawings=S.drawings.filter(z=>z.id!==id); S.deleted[id]=now(); commit(); renderDrawLayer(); renderDraw(); renderTabs(); toast('그린 경로를 지웠어요'); }
+function delDrawing(id){ const rec=S.drawings.find(z=>z.id===id); if(!rec) return; S.drawings=S.drawings.filter(z=>z.id!==id); S.deleted[id]=now(); commit(); renderDrawLayer(); renderDraw(); renderTabs();
+  toast('그린 경로를 지웠어요',{undo:()=>{ delete S.deleted[id]; rec.u=now(); S.drawings.push(rec); commit(); renderDrawLayer(); renderDraw(); renderTabs(); }}); }
 
 /* ---------- dialogs: place ---------- */
 let editPlace=null, newPlaceAt=null;
 $('#p-cat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join('');
 function nearestCity(lat,lng){let best='rome',bd=1e9;for(const k in CITY){const c=CITY[k].center;const dd=(c[0]-lat)**2+(c[1]-lng)**2;if(dd<bd){bd=dd;best=k}}return best}
-function addPlaceAt(ll){ editPlace=null; newPlaceAt=ll; $('#place-h').textContent='새 장소'; $('#p-name').value=''; $('#p-cat').value='관광'; $('#p-city').value=nearestCity(ll.lat,ll.lng); $('#p-note').value=''; $('#place-del').hidden=true; $('#dlg-place').showModal(); setTimeout(()=>$('#p-name').focus(),50); }
+function addPlaceAt(ll,name){ editPlace=null; newPlaceAt=ll; $('#place-h').textContent='새 장소'; $('#p-name').value=name||''; $('#p-cat').value='관광'; $('#p-city').value=nearestCity(ll.lat,ll.lng); $('#p-note').value=''; $('#place-del').hidden=true; $('#dlg-place').showModal(); setTimeout(()=>$('#p-name').focus(),50); }
 function openPlace(id){ const p=placeById(id); if(!p) return; editPlace=id; newPlaceAt=null; $('#place-h').textContent='장소 수정'; $('#p-name').value=p.name; $('#p-cat').value=p.cat; $('#p-city').value=p.city; $('#p-note').value=p.note||''; $('#place-del').hidden=false; $('#dlg-place').showModal(); }
 $('#place-form').addEventListener('submit',e=>{
   e.preventDefault(); const name=$('#p-name').value.trim(); if(!name) return;
   const rec={name,cat:$('#p-cat').value,city:$('#p-city').value,note:$('#p-note').value.trim(),u:now()};
-  if(editPlace) Object.assign(placeById(editPlace),rec,{conf:'확인'}); else S.places.push(Object.assign({id:uid('p'),lat:+newPlaceAt.lat.toFixed(7),lng:+newPlaceAt.lng.toFixed(7),cid:null,conf:'확인'},rec));
-  commit(); $('#dlg-place').close(); renderAll(); toast('장소를 저장했어요');
+  let made=null;
+  if(editPlace) Object.assign(placeById(editPlace),rec,{conf:'확인'}); else { made=Object.assign({id:uid('p'),lat:+newPlaceAt.lat.toFixed(7),lng:+newPlaceAt.lng.toFixed(7),cid:null,conf:'확인'},rec); S.places.push(made); }
+  commit(); $('#dlg-place').close(); renderAll(); toast('장소를 저장했어요'); if(made) flyTo(made.id);
 });
 $('#place-cancel').onclick=()=>$('#dlg-place').close();
-$('#place-del').onclick=()=>{ if(!editPlace) return; S.places=S.places.filter(p=>p.id!==editPlace); S.deleted[editPlace]=now(); for(const i of S.items) if(i.place===editPlace){i.place=null;i.u=now()} commit(); $('#dlg-place').close(); map.closePopup(); renderAll(); toast('장소를 지웠어요'); };
+$('#place-del').onclick=()=>{ if(!editPlace) return; const id=editPlace, rec=placeById(id), linked=S.items.filter(i=>i.place===id);
+  S.places=S.places.filter(p=>p.id!==id); S.deleted[id]=now(); for(const i of linked){i.place=null;i.u=now()} commit(); $('#dlg-place').close(); map.closePopup(); renderAll();
+  toast('장소를 지웠어요',{undo:()=>{ delete S.deleted[id]; rec.u=now(); S.places.push(rec); for(const i of linked) if(S.items.includes(i)&&!i.place){i.place=id;i.u=now()} commit(); renderAll(); }}); };
 
 /* ---------- events ---------- */
 $('#days').addEventListener('click',e=>{const b=e.target.closest('.day');if(!b)return;ui.day=b.dataset.date;saveUI();map.closePopup();renderAll();fitDay();});
@@ -641,6 +709,9 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-fly]'); if(a){e.preventDefault();flyTo(a.dataset.fly);return}
   const it=e.target.closest('[data-item]'); if(it){openItem(it.dataset.item);return}
   if(e.target.closest('#add-item')){openItem(null);return}
+  if(e.target.closest('#open-search')){ $('#s-results').innerHTML=''; $('#dlg-search').showModal(); setTimeout(()=>$('#s-q').focus(),50); return }
+  if(e.target.closest('#backup-now')){ exportTrip(); return }
+  const hit=e.target.closest('[data-hit]'); if(hit){ const h=searchHits[+hit.dataset.hit]; $('#dlg-search').close(); addPlaceAt({lat:+h.lat,lng:+h.lon},h.name||h.display_name.split(',')[0]); return }
   const ad=e.target.closest('[data-addat]'); if(ad){map.closePopup();openItem(null,{place:ad.dataset.addat,title:placeById(ad.dataset.addat).name});return}
   const ep=e.target.closest('[data-editpl]'); if(ep){map.closePopup();openPlace(ep.dataset.editpl);return}
   const dr=e.target.closest('[data-draw]'); if(dr){openDraw(dr.dataset.draw);return}
@@ -677,11 +748,12 @@ async function shareOrDownload(name,text,type){
   }catch(e){ if(e&&e.name==='AbortError') return; }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
 }
-$('#m-export').onclick=()=>{ $('#dlg-menu').close(); shareOrDownload('이탈리아여행-'+stamp()+'.json',JSON.stringify(S),'application/json'); };
+function exportTrip(){ shareOrDownload('이탈리아여행-'+stamp()+'.json',JSON.stringify(S),'application/json'); meta.n=0; meta.last=now(); lsSet(META_KEY,JSON.stringify(meta)); renderPlan(); }
+$('#m-export').onclick=()=>{ $('#dlg-menu').close(); exportTrip(); };
 $('#m-import').onclick=()=>$('#file-json').click();
 $('#file-json').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  try{ const other=normalize(JSON.parse(await f.text())); const n=merge(other); save(); $('#dlg-menu').close(); renderAll(); toast(n?`합쳤어요 · ${n}건 바뀜`:'바뀐 내용이 없어요'); }
+  try{ const other=normalize(JSON.parse(await f.text())); const n=merge(other); save(); markDirty(); $('#dlg-menu').close(); renderAll(); toast(n?`합쳤어요 · ${n}건 바뀜`:'바뀐 내용이 없어요'); }
   catch(err){ toast('여행 파일을 읽지 못했어요. 이 앱에서 보낸 .json 파일인지 확인해 주세요.'); }
 });
 function merge(o){
@@ -743,40 +815,96 @@ $('#file-kml').addEventListener('change',async e=>{
     commit(); $('#dlg-menu').close(); renderAll(); toast(`장소 ${np}곳, 경로 ${nl}개를 가져왔어요`);
   }catch(err){ toast('KML 파일을 읽지 못했어요'); }
 });
-/* offline tiles */
-function tileUrls(){
-  const c=tileCfg(), b=map.getBounds(), z0=Math.round(map.getZoom()), urls=[];
-  const r=(window.devicePixelRatio>1&&c.url.includes('{r}'))?'@2x':'';
-  for(let z=z0;z<=Math.min(z0+2,c.max);z++){
-    const nw=map.project(b.getNorthWest(),z).divideBy(256).floor(), se=map.project(b.getSouthEast(),z).divideBy(256).floor();
-    for(let x=nw.x;x<=se.x;x++) for(let y=nw.y;y<=se.y;y++){
-      const s=c.sub?c.sub[(x+y)%c.sub.length]:'';
-      urls.push(c.url.replace('{s}',s).replace('{z}',z).replace('{x}',x).replace('{y}',y).replace('{r}',r));
-    }
-  }
-  return urls;
-}
+/* 오프라인 상태: 지도 타일은 직접 본 것만 저장됨 (미리 내려받기는 지도 제공처 규정상 하지 않음) */
 $('#m-offline').onclick=async()=>{
   $('#dlg-menu').close();
-  if(!('caches' in window)){toast('이 브라우저는 오프라인 저장을 지원하지 않아요');return}
-  const urls=tileUrls();
-  if(urls.length>450){toast(`범위가 넓어요 (${urls.length}장). 지도를 더 확대한 뒤 다시 눌러 주세요.`);return}
-  const cache=await caches.open('tiles-v2'); let done=0,fail=0;
-  for(let i=0;i<urls.length;i+=6){
-    await Promise.all(urls.slice(i,i+6).map(async u=>{ try{ if(await cache.match(u)){done++;return} const res=await fetch(u,{mode:'cors'}); if(res.ok){await cache.put(u,res.clone());done++} else fail++; }catch(e){fail++} }));
-    toast(`지도 저장 중 ${done+fail}/${urls.length}`,true);
-  }
-  toast(fail?`저장 ${done}장 · 실패 ${fail}장`:`이 화면 지도 ${done}장을 저장했어요`);
+  if(!('caches' in window)){ toast('이 브라우저는 오프라인 저장을 지원하지 않아요'); return }
+  try{
+    const names=await caches.keys(); const shell=names.some(k=>k.startsWith('trip-shell'));
+    const n=(await (await caches.open('tiles-v2')).keys()).length;
+    toast(`${shell?'앱 파일 저장됨':'앱 파일이 아직 저장되지 않았어요'} · 지도 ${n}장 저장됨`,{ms:6000});
+  }catch(e){ toast('저장 상태를 확인하지 못했어요'); }
 };
+
+/* ---------- 장소 검색 (OpenStreetMap Nominatim, 버튼을 눌렀을 때만 1회 요청) ---------- */
+let searchHits=[];
+$('#search-cancel').onclick=()=>$('#dlg-search').close();
+$('#search-form').addEventListener('submit',async e=>{
+  e.preventDefault(); const q=$('#s-q').value.trim(); if(!q) return;
+  const box=$('#s-results'); box.innerHTML='<p class="empty">찾는 중…</p>';
+  const c=CITY[day().city].center, k=0.35;
+  const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&countrycodes=it&accept-language=ko,en,it&q='+encodeURIComponent(q)+`&viewbox=${c[1]-k},${c[0]+k},${c[1]+k},${c[0]-k}`;
+  try{
+    const r=await fetch(url,{headers:{Accept:'application/json'}}); if(!r.ok) throw new Error(r.status);
+    searchHits=await r.json();
+    box.innerHTML=searchHits.length?searchHits.map((h,i)=>`<button type="button" class="pl" data-hit="${i}" style="--cat:var(--ink-3)"><span class="sw"></span><span class="nm">${esc(h.name||h.display_name.split(',')[0])}<span class="sub">${esc(h.display_name)}</span></span><span class="conf"></span></button>`).join(''):'<p class="empty">결과가 없어요. 이탈리아어나 영어 이름으로 다시 찾아 보세요.</p>';
+  }catch(err){ box.innerHTML='<p class="empty">검색하지 못했어요. 인터넷 연결을 확인해 주세요.</p>'; }
+});
+
+/* ---------- 자동 동기화 (선택 기능) ---------- */
+let sync=null, syncBusy=false, syncT=null, syncSeq=0;
+try{ sync=JSON.parse(lsGet(SYNC_KEY)||'null'); }catch(e){}
+const hhmm=()=>{ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+function syncLabel(t){ $('#m-sync-sub').textContent=sync?(t||'켜짐'):'꺼짐 · 서버를 연결하면 두 폰이 자동으로 맞춰져요'; }
+function busyUI(){ return !!document.querySelector('dialog[open]')||map.pm.globalDrawModeEnabled()||map.pm.globalEditModeEnabled()||map.pm.globalRemovalModeEnabled(); }
+async function syncNow(){
+  if(!sync||syncBusy||!navigator.onLine||busyUI()) return;
+  syncBusy=true;
+  try{
+    const auth={Authorization:'Bearer '+sync.code};
+    for(let i=0;i<3;i++){
+      const r=await fetch(sync.url,{headers:auth,cache:'no-store'});
+      let rev=0;
+      if(r.status===200){ const j=await r.json(); rev=j.rev; if(busyUI()) return; if(merge(normalize(j.data))){ save(true); renderAll(); } }
+      else if(r.status!==404) throw new Error('HTTP '+r.status);
+      if(!sync.dirty&&r.status===200) break;
+      const seq=syncSeq;
+      const p=await fetch(sync.url,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},auth),body:JSON.stringify({baseRev:rev,data:S})});
+      if(p.status===409) continue;
+      if(!p.ok) throw new Error('HTTP '+p.status);
+      if(seq===syncSeq){ sync.dirty=false; lsSet(SYNC_KEY,JSON.stringify(sync)); }
+      break;
+    }
+    $('#save-state').textContent='동기화됨 '+hhmm(); syncLabel('켜짐 · 마지막 동기화 '+hhmm());
+  }catch(e){ const m=e.message==='HTTP 401'?'동기화 코드가 맞지 않아요':'동기화 대기 중'; $('#save-state').textContent=m; syncLabel('켜짐 · '+m); }
+  finally{ syncBusy=false; }
+}
+setInterval(()=>{ if(!document.hidden) syncNow(); },20000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) syncNow(); });
+window.addEventListener('online',syncNow);
+$('#m-sync').onclick=()=>{ $('#dlg-menu').close(); $('#y-url').value=sync?sync.url:''; $('#y-code').value=sync?sync.code:''; $('#y-msg').textContent=''; $('#sync-off').hidden=!sync; $('#dlg-sync').showModal(); };
+$('#sync-cancel').onclick=()=>$('#dlg-sync').close();
+$('#sync-off').onclick=()=>{ sync=null; try{localStorage.removeItem(SYNC_KEY)}catch(e){} syncLabel(); $('#dlg-sync').close(); renderPlan(); toast('자동 동기화를 껐어요'); };
+$('#sync-form').addEventListener('submit',async e=>{
+  e.preventDefault(); const url=$('#y-url').value.trim(), code=$('#y-code').value.trim(), msg=$('#y-msg');
+  if(!/^https:\/\//.test(url)&&!/^http:\/\/(localhost|127\.0\.0\.1)/.test(url)){ msg.textContent='https:// 로 시작하는 주소를 넣어 주세요.'; return }
+  if(!code){ msg.textContent='코드를 넣어 주세요.'; return }
+  msg.textContent='연결 확인 중…';
+  try{
+    const r=await fetch(url,{headers:{Authorization:'Bearer '+code},cache:'no-store'});
+    if(r.status===401){ msg.textContent='코드가 맞지 않아요.'; return }
+    if(r.status!==200&&r.status!==404){ msg.textContent='서버가 예상과 다르게 답했어요 ('+r.status+'). 주소를 확인해 주세요.'; return }
+  }catch(err){ msg.textContent='서버에 연결하지 못했어요. 주소와 서버의 허용 출처(origins) 설정을 확인해 주세요.'; return }
+  sync={url,code,dirty:true}; lsSet(SYNC_KEY,JSON.stringify(sync)); syncLabel(); $('#dlg-sync').close(); renderPlan(); toast('자동 동기화를 켰어요'); syncNow();
+});
 
 /* ---------- toast ---------- */
 let toastT=null;
-function toast(msg,sticky){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); if(!sticky) toastT=setTimeout(hideToast,2600); }
+function toast(msg,opt){
+  const o=opt===true?{sticky:true}:(opt||{}); const t=$('#toast'); t.textContent=''; const sp=document.createElement('span'); sp.textContent=msg; t.appendChild(sp);
+  const act=o.undo?{label:'되돌리기',fn:o.undo}:o.action;
+  if(act){ const b=document.createElement('button'); b.type='button'; b.textContent=act.label; b.onclick=()=>{ hideToast(); act.fn(); }; t.appendChild(b); }
+  t.hidden=false; clearTimeout(toastT); if(!o.sticky) toastT=setTimeout(hideToast,o.ms||(act?7000:2600));
+}
 function hideToast(){ $('#toast').hidden=true; }
 
 /* ---------- service worker ---------- */
 if('serviceWorker' in navigator && location.protocol!=='file:'){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  const had=!!navigator.serviceWorker.controller;
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(reg=>{
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+  }).catch(()=>{}));
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(had) toast('새 버전이 준비됐어요',{sticky:true,action:{label:'지금 적용',fn:()=>location.reload()}}); });
 }
 window.addEventListener('online',()=>toast('다시 온라인이에요'));
 window.addEventListener('offline',()=>toast('오프라인이에요. 저장해 둔 지도와 일정은 그대로 보여요.'));
