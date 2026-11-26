@@ -404,12 +404,13 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26g';
+const APP_VER='2026.11.26h';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
-const CATS=['숙소','식당','카페','관광','교통','기타'];
-const CAT_GLYPH={'숙소':'숙','식당':'식','카페':'카','관광':'관','교통':'역','기타':'·'};
-const CAT_COLOR={'숙소':'#16212b','식당':'#c96a1b','카페':'#8a5a2b','관광':'#1f6aa8','교통':'#5b6770','기타':'#7a4fa3'};
+const CATS=['숙소','식당','디저트·카페','관광','교통','기타'];
+const OLD_CATS={'카페':'디저트·카페','디저트':'디저트·카페'};  // 예전 이름으로 저장된 장소를 새 이름으로 읽음
+const CAT_GLYPH={'숙소':'숙','식당':'식','디저트·카페':'디','관광':'관','교통':'역','기타':'·'};
+const CAT_COLOR={'숙소':'#16212b','식당':'#c96a1b','디저트·카페':'#8a5a2b','관광':'#1f6aa8','교통':'#5b6770','기타':'#7a4fa3'};
 const DRAW_COLORS=['#2f6fb0','#c0562f','#0f766e','#7a4fa3','#c9a21b','#16212b'];
 const VEC_KEY='italy-trip-vec', LANG_KEY='italy-trip-maplang', MAP_DIR='map/', MAP_FILES=['overview.pmtiles','cities.pmtiles'];
 // 내장 지도(cities.pmtiles)가 담고 있는 구역 [서, 남, 동, 북]. map/regions.geojson 과 같아야 함
@@ -433,12 +434,15 @@ let ui={day:null,tab:'plan',line:true,cat:'전체',q:'',cats:null,panel:true,hid
 try{Object.assign(ui,JSON.parse(lsGet(UI_KEY)||'{}'))}catch(e){}
 if(!ui.cats){ ui.cats={}; for(const c of ['숙소','식당','카페','관광','교통','기타']) ui.cats[c]=ui.allpl!==false; }
 delete ui.allpl;
+for(const c of CATS) if(!(c in ui.cats)) ui.cats[c]=c==='디저트·카페'?ui.cats['카페']!==false:true;
+for(const c of Object.keys(OLD_CATS)) delete ui.cats[c];
 
 /* ---------- state ---------- */
 function normalize(d){
   d.items=d.items||[];d.places=d.places||[];d.drawings=d.drawings||[];d.deleted=d.deleted||{};
   const t=d.stamp||d.seededAt||now();
   for(const a of [d.items,d.places,d.drawings]) for(const x of a){ if(!x.id) x.id=uid('x'); if(!x.u) x.u=t; }
+  for(const pl of d.places) if(OLD_CATS[pl.cat]) pl.cat=OLD_CATS[pl.cat];
   return d;
 }
 // data.json이 새 버전이면, 이 기기에서 손대지 않은 항목만 새 내용으로 바꾸고 새 항목을 더함
