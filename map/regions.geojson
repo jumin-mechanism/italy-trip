@@ -1,0 +1,203 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "rome"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       12.42,
+       41.865
+      ],
+      [
+       12.54,
+       41.865
+      ],
+      [
+       12.54,
+       41.93
+      ],
+      [
+       12.42,
+       41.93
+      ],
+      [
+       12.42,
+       41.865
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "fco"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       12.22,
+       41.78
+      ],
+      [
+       12.28,
+       41.78
+      ],
+      [
+       12.28,
+       41.82
+      ],
+      [
+       12.22,
+       41.82
+      ],
+      [
+       12.22,
+       41.78
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "florence"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       11.14,
+       43.74
+      ],
+      [
+       11.33,
+       43.74
+      ],
+      [
+       11.33,
+       43.87
+      ],
+      [
+       11.14,
+       43.87
+      ],
+      [
+       11.14,
+       43.74
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "naples"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       14.2,
+       40.815
+      ],
+      [
+       14.3,
+       40.815
+      ],
+      [
+       14.3,
+       40.875
+      ],
+      [
+       14.2,
+       40.875
+      ],
+      [
+       14.2,
+       40.815
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "pompeii"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       14.46,
+       40.735
+      ],
+      [
+       14.51,
+       40.735
+      ],
+      [
+       14.51,
+       40.765
+      ],
+      [
+       14.46,
+       40.765
+      ],
+      [
+       14.46,
+       40.735
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "sorrento"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       14.35,
+       40.615
+      ],
+      [
+       14.4,
+       40.615
+      ],
+      [
+       14.4,
+       40.64
+      ],
+      [
+       14.35,
+       40.64
+      ],
+      [
+       14.35,
+       40.615
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

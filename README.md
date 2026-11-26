@@ -11,7 +11,9 @@
 | `data.json` | 처음 데이터 (버전 2): 10일 일정 56건, 장소 80곳, 구글어스 루트 10개 |
 | `sw.js` | 서비스 워커. 앱 파일과 한 번 본 지도를 저장해 오프라인에서도 열림 |
 | `manifest.webmanifest`, `icons/` | 폰 홈 화면에 앱처럼 설치하기 위한 파일 |
-| `vendor/` | Leaflet 1.9.4, Leaflet-Geoman 2.17.0 (둘 다 MIT 라이선스) |
+| `vendor/` | Leaflet 1.9.4, Leaflet-Geoman 2.17.0 (MIT), protomaps-leaflet 5.1.0 (BSD-3) |
+| `map/regions.geojson` | 내장 지도에 담을 구역 (로마, 피우미치노 공항, 피렌체, 나폴리, 폼페이, 소렌토) |
+| `.github/workflows/build-map.yml` | 내장 지도 파일을 만들어 저장소에 올리는 GitHub Actions |
 | `server-sync/` | (선택) 자동 동기화용 서버 코드. GitHub Pages에는 올리지 않아도 됨 |
 
 ## 올리는 방법
@@ -71,11 +73,35 @@ app.use('/api/trip-sync', require('./trip-sync')({
 앱을 열 때, 고친 직후, 그리고 20초마다 서로 맞춥니다. 인터넷이 없으면 기기에만 저장했다가 연결되면 맞춥니다.
 코드는 폰 브라우저 저장소에 그대로 보관되니, 다른 곳에 쓰는 비밀번호를 넣지 마세요.
 
+## 내장 지도 (오프라인 · 한국어)
+지도 파일 두 개(`map/overview.pmtiles`, `map/cities.pmtiles`)가 저장소에 있으면 앱이 자동으로 내장 지도를 씁니다.
+파일이 없으면 지금처럼 OpenStreetMap 온라인 지도로 동작합니다.
+
+### 지도 파일 만들기 (한 번만)
+1. 이 폴더를 `.github` 폴더까지 포함해 저장소에 올립니다.
+2. 저장소의 **Actions** 탭 → 왼쪽 **지도 파일 만들기** → **Run workflow** 를 누릅니다.
+3. 몇 분 뒤 초록 체크가 뜨면 `map/` 폴더에 파일 두 개가 생깁니다.
+4. 1~2분 뒤 앱을 다시 열면 내장 지도로 바뀝니다. 안 바뀌면 Actions 탭에 "pages build and deployment"가 돌았는지 확인하고, 안 돌았으면 아무 파일이나 다시 올려 배포를 한 번 일으키세요.
+
+Actions를 쓰기 어렵다면 PC에서 직접 만들 수도 있습니다. [go-pmtiles 릴리스](https://github.com/protomaps/go-pmtiles/releases)에서 `pmtiles`를 받고, [빌드 목록](https://maps.protomaps.com/builds/)에서 최근 날짜를 골라 아래 두 줄을 실행한 뒤 `map/` 폴더의 결과물을 올립니다.
+
+```bash
+pmtiles extract https://build.protomaps.com/<날짜8자리>.pmtiles map/overview.pmtiles --bbox=10.9,40.4,14.9,44.1 --maxzoom=10
+pmtiles extract https://build.protomaps.com/<날짜8자리>.pmtiles map/cities.pmtiles --region=map/regions.geojson --maxzoom=15
+```
+
+### 쓰는 법
+- 메뉴 → **오프라인 지도 받기**: 지도 파일을 통째로 기기에 저장합니다. 그 뒤로는 인터넷 없이도 구역 안 어디든 지도가 나옵니다.
+- 메뉴 → **지도 글자 언어**: 한국어 / 현지어 / 영어. 한국어는 한국어 이름이 등록된 도시·명소만 바뀌고, 길 이름과 대부분의 가게는 이탈리아어로 나옵니다.
+- 메뉴 → **지도 종류**: 내장 지도와 OpenStreetMap을 바꿉니다.
+- 상세 지도는 위 구역 안에서만 나옵니다. 구역 밖은 줌 13까지의 개요 지도만 보입니다. 구역을 바꾸려면 `map/regions.geojson`과 `index.html`의 `REGIONS`를 같이 고친 뒤 지도를 다시 만드세요.
+- 파일 하나가 95MB를 넘으면 GitHub에 올릴 수 없어 만들기가 실패합니다. 그때는 구역을 줄이세요.
+
 ## 오프라인
 - 앱과 일정은 한 번 열면 저장되어 인터넷 없이도 열리고, 고칠 수 있습니다.
-- 지도는 **직접 본 곳만** 저장됩니다. 메뉴 → "오프라인 저장 상태"에서 몇 장 저장됐는지 볼 수 있습니다.
-- 지도를 미리 한꺼번에 내려받는 기능은 없습니다. 지도 제공처(OpenStreetMap) 이용 정책이 금지하기 때문입니다.
-- 인터넷 없이 쓸 지도는 Organic Maps나 구글맵 오프라인 지도를 함께 받아 두세요. 메뉴 → "KML로 내보내기" 파일을 Organic Maps에서 열면 핀과 경로가 들어갑니다.
+- 내장 지도는 "오프라인 지도 받기"를 누르면 통째로 저장됩니다. 메뉴 → "오프라인 저장 상태"에서 확인할 수 있습니다.
+- OpenStreetMap 지도를 쓰는 동안에는 직접 본 곳만 저장됩니다. 미리 한꺼번에 내려받는 것은 OpenStreetMap 이용 정책이 금지합니다.
+- 예비로 Organic Maps나 구글맵 오프라인 지도를 받아 두면 길찾기까지 됩니다. 메뉴 → "KML로 내보내기" 파일을 Organic Maps에서 열면 핀과 경로가 들어갑니다.
 
 ## 구글어스 · 마이맵스
 - **KML로 내보내기**: 날짜별 폴더와 장소 전체 폴더로 정리된 KML이 만들어집니다.
@@ -85,3 +111,4 @@ app.use('/api/trip-sync', require('./trip-sync')({
 ```bash
 python -m http.server 8000   # http://localhost:8000
 ```
+이 서버는 파일의 일부만 읽는 요청을 지원하지 않아 내장 지도는 나오지 않습니다. 일정과 OpenStreetMap 지도는 확인할 수 있습니다.

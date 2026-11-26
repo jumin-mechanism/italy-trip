@@ -51,6 +51,7 @@
 }
 body[data-city="rome"]{--city:var(--rome)} body[data-city="florence"]{--city:var(--florence)} body[data-city="naples"]{--city:var(--naples)}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -83,6 +84,7 @@ button{cursor:pointer}
 .mapwrap{order:1;position:relative;min-height:0}
 #map{position:absolute;inset:0;background:var(--surface-2)}
 .leaflet-tile-pane{filter:var(--tile-filter)}
+#map.vec .leaflet-tile-pane{filter:none}
 @media (max-width:760px){
   .layout{grid-template-columns:1fr;grid-template-rows:42% 1fr}
   .mapwrap{order:0;border-bottom:1px solid var(--line)}
@@ -243,7 +245,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
     </div>
     <div class="tabbody" id="tab-plan"></div>
     <div class="tabbody" id="tab-places" hidden>
-      <input class="search" id="place-q" type="search" placeholder="장소 이름·메모 검색" autocomplete="off">
+      <input class="search" id="place-q" type="search" placeholder="저장된 장소에서 찾기" autocomplete="off">
       <div class="chips" id="place-chips"></div>
       <div id="place-list"></div>
     </div>
@@ -332,7 +334,9 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
     <div class="sect">오프라인</div>
     <div class="menu-list">
       <button type="button" id="m-offline">오프라인 저장 상태<small>앱과 지도가 이 기기에 저장됐는지 확인해요. 지도는 직접 본 곳만 저장돼요</small></button>
-      <button type="button" id="m-tiles">지도 스타일<small id="m-tiles-sub"></small></button>
+      <button type="button" id="m-mapdl" hidden>오프라인 지도 받기<small id="m-mapdl-sub"></small></button>
+      <button type="button" id="m-tiles">지도 종류<small id="m-tiles-sub"></small></button>
+      <button type="button" id="m-lang" hidden>지도 글자 언어<small id="m-lang-sub"></small></button>
     </div>
     <div class="sect">기타</div>
     <div class="menu-list">
@@ -344,7 +348,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 </dialog>
 <dialog id="dlg-search">
   <form class="dlg" method="dialog" id="search-form">
-    <h3>이름으로 장소 찾기</h3>
+    <h3>새 장소 찾기</h3>
     <div class="row" style="flex-wrap:nowrap"><input id="s-q" type="search" placeholder="예: Trattoria Sostanza" autocomplete="off" style="flex:1;min-width:0"><button type="submit" class="btn primary">찾기</button></div>
     <p class="hint">이탈리아어나 영어 이름이 잘 찾아져요. 인터넷이 필요해요.</p>
     <div id="s-results"></div>
@@ -371,17 +375,24 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/leaflet-geoman.min.js"></script>
+<script src="vendor/protomaps-leaflet.js"></script>
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26';
+const APP_VER='2026.11.26c';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','카페','관광','교통','기타'];
 const CAT_GLYPH={'숙소':'숙','식당':'식','카페':'카','관광':'관','교통':'역','기타':'·'};
 const CAT_COLOR={'숙소':'#16212b','식당':'#c96a1b','카페':'#8a5a2b','관광':'#1f6aa8','교통':'#5b6770','기타':'#7a4fa3'};
 const DRAW_COLORS=['#2f6fb0','#c0562f','#0f766e','#7a4fa3','#c9a21b','#16212b'];
+const VEC_KEY='italy-trip-vec', LANG_KEY='italy-trip-maplang', MAP_DIR='map/', MAP_FILES=['overview.pmtiles','cities.pmtiles'];
+// 내장 지도(cities.pmtiles)가 담고 있는 구역 [서, 남, 동, 북]. map/regions.geojson 과 같아야 함
+const REGIONS=[[12.42,41.865,12.54,41.93],[12.22,41.78,12.28,41.82],[11.14,43.74,11.33,43.87],[14.20,40.815,14.30,40.875],[14.46,40.735,14.51,40.765],[14.35,40.615,14.40,40.64]];
+const LANGS={ko:'한국어 (이름이 등록된 곳만, 나머지는 현지어)',it:'현지어 (이탈리아어)',en:'영어'};
+let vecOK=false, vecBg='';
 const TILES={
+  vector:{name:'내장 지도 (오프라인 가능)',vector:true},
   osm:{name:'OpenStreetMap 표준 (기본)',url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',sub:'',max:19},
   hot:{name:'OpenStreetMap 인도주의',url:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, 스타일 <a href="https://www.hotosm.org/">HOT</a>',sub:'abc',max:19}
 };
@@ -437,10 +448,12 @@ async function init(){
   if(!S){ try{S=await loadSeed(); save(true)}catch(e){ toast('처음 데이터를 불러오지 못했어요. 인터넷 연결 후 다시 열어 주세요.'); S=normalize({days:[],items:[],places:[],drawings:[]}); } }
   if(!S.days||!S.days.length){ S.days=[] }
   if(!ui.day||!S.days.find(d=>d.date===ui.day)) ui.day=pickToday()||(S.days[0]&&S.days[0].date);
+  vecOK=lsGet(VEC_KEY)==='1'&&!!window.protomapsL;
   applyTheme(); buildMap(); renderAll(); fitDay();
   $('#app-ver').textContent='버전 '+APP_VER;
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   await upgradeSeed(); syncLabel(); syncNow();
+  checkVector().then(ok=>{ if(ok===vecOK) return; vecOK=ok; lsSet(VEC_KEY,ok?'1':'0'); setTiles(); });
 }
 let saveT=null;
 function save(quiet){
@@ -472,7 +485,9 @@ function applyTheme(){
   const t=lsGet(THEME_KEY)||'system';
   if(t==='system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',t);
   $('#m-theme-sub').textContent={system:'기기 설정 따르기',light:'밝게',dark:'어둡게'}[t];
+  if(map&&tileCfg().vector) setTiles();
 }
+try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(map&&tileCfg().vector) setTiles(); }); }catch(e){}
 
 /* ---------- render ---------- */
 function renderAll(){ renderDays(); renderTabs(); renderPlan(); renderPlaces(); renderDraw(); renderMap(); }
@@ -521,7 +536,7 @@ function renderPlaces(){
     <button type="button" class="pl" data-fly="${p.id}" style="--cat:${CAT_COLOR[p.cat]||'#777'}"><span class="sw"></span>
     <span class="nm">${esc(p.name)}${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
     <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button>`).join('')}</div>`).join(''):'<p class="empty">조건에 맞는 장소가 없어요.</p>';
-  $('#place-list').insertAdjacentHTML('beforeend','<button type="button" class="btn wide" id="open-search">+ 이름으로 장소 찾아 추가</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
+  $('#place-list').insertAdjacentHTML('beforeend','<button type="button" class="btn wide" id="open-search">'+(q?'“'+esc(ui.q.trim())+'” 새 장소로 찾아 추가':'+ 새 장소를 이름으로 찾아 추가')+'</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
 }
 function renderDraw(){
   const d=day(); if(!d) return;
@@ -535,9 +550,30 @@ const fmtKm=m=>m>=1000?(m/1000).toFixed(1)+'km':Math.round(m)+'m';
 
 /* ---------- map ---------- */
 let map, tileLayer, placeLayer, stopLayer, drawLayer, meLayer;
-function tileCfg(){ const k=lsGet(TILE_KEY)||'osm'; return TILES[k]?Object.assign({key:k},TILES[k]):Object.assign({key:'osm'},TILES.osm); }
+function tileCfg(){ let k=lsGet(TILE_KEY)||(vecOK?'vector':'osm'); if(!TILES[k]||(k==='vector'&&!vecOK)) k='osm'; return Object.assign({key:k},TILES[k]); }
+function isDark(){ const t=document.documentElement.getAttribute('data-theme'); return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches; }
+const mapLang=()=>{ const l=lsGet(LANG_KEY); return LANGS[l]?l:'ko'; };
+// 내장 지도: 전체 개요(줌 13까지) 위에 도시별 상세 지도를 얹음. 가게·명소 이름표는 기본 스타일에 없어서 직접 추가
+function vecLayers(){
+  const dark=isDark(), lang=mapLang(), names=['name:'+lang,'name'];
+  const ink=dark?'#c9d3da':'#4a5560', halo=dark?'#1f2937':'#ffffff';
+  const mk=(file,opt)=>{
+    const l=protomapsL.leafletLayer(Object.assign({url:MAP_DIR+file,flavor:dark?'dark':'light',lang},opt));
+    l.labelRules.push(
+      {dataLayer:'places',symbolizer:new protomapsL.CenteredTextSymbolizer({labelProps:names,fill:ink,stroke:halo,width:2,font:'500 11px sans-serif'}),minzoom:13,filter:(z,f)=>f.props.kind==='neighbourhood'},
+      {dataLayer:'pois',symbolizer:new protomapsL.CenteredTextSymbolizer({labelProps:names,fill:ink,stroke:halo,width:2,font:'400 11px sans-serif'}),minzoom:14,filter:(z,f)=>f.props.min_zoom==null||f.props.min_zoom<=z+1,sort:(a,b)=>(a.min_zoom||99)-(b.min_zoom||99)});
+    vecBg=l.backgroundColor||''; return l;
+  };
+  const ls=[mk('overview.pmtiles',{maxDataZoom:10,maxZoom:13,zIndex:1})];
+  for(const r of REGIONS) ls.push(mk('cities.pmtiles',{maxDataZoom:15,minZoom:11,maxZoom:19,zIndex:2,bounds:[[r[1],r[0]],[r[3],r[2]]]}));
+  return L.layerGroup(ls);
+}
+async function checkVector(){
+  if(!window.protomapsL) return false;
+  try{ const r=await fetch(MAP_DIR+'cities.pmtiles',{headers:{Range:'bytes=0-6'}}); if(r.status!==206) return false; return new TextDecoder().decode(await r.arrayBuffer())==='PMTiles'; }catch(e){ return false }
+}
 function buildMap(){
-  map=L.map('map',{zoomControl:true,preferCanvas:false,tap:true}).setView(CITY.rome.center,14);
+  map=L.map('map',{zoomControl:true,preferCanvas:false,tap:true,maxZoom:19}).setView(CITY.rome.center,14);
   setTiles();
   placeLayer=L.layerGroup().addTo(map); stopLayer=L.layerGroup().addTo(map); drawLayer=L.featureGroup().addTo(map); meLayer=L.layerGroup().addTo(map);
   try{ map.pm.setLang('ko'); }catch(e){}
@@ -557,9 +593,11 @@ function buildMap(){
   map.on('zoomend',updLbl); updLbl();
 }
 function setTiles(){
-  const c=tileCfg(); if(tileLayer) map.removeLayer(tileLayer);
-  tileLayer=L.tileLayer(c.url,{attribution:c.attr,subdomains:c.sub||'abc',maxZoom:c.max,detectRetina:false,crossOrigin:true}).addTo(map);
-  $('#m-tiles-sub').textContent=c.name;
+  const c=tileCfg(), el=map.getContainer(); if(tileLayer) map.removeLayer(tileLayer);
+  el.classList.toggle('vec',!!c.vector);
+  if(c.vector){ tileLayer=vecLayers().addTo(map); el.style.background=vecBg; }
+  else { el.style.background=''; tileLayer=L.tileLayer(c.url,{attribution:c.attr,subdomains:c.sub||'abc',maxZoom:c.max,detectRetina:false,crossOrigin:true}).addTo(map); }
+  $('#m-tiles-sub').textContent=c.name; $('#m-lang').hidden=!c.vector; $('#m-lang-sub').textContent=LANGS[mapLang()]; $('#m-mapdl').hidden=!vecOK; mapLabel();
 }
 function pinIcon(n,color,fixed){ return L.divIcon({className:'',html:`<div class="pin ${fixed?'fixed':''}" style="--c:${color}"><span>${n}</span></div>`,iconSize:[34,34],iconAnchor:[5,34],popupAnchor:[12,-32]}); }
 function dotIcon(color,dim,glyph){ return L.divIcon({className:'',html:`<div class="pdot ${dim?'dim':''}" style="--c:${color}">${glyph||''}</div>`,iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-11]}); }
@@ -709,7 +747,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-fly]'); if(a){e.preventDefault();flyTo(a.dataset.fly);return}
   const it=e.target.closest('[data-item]'); if(it){openItem(it.dataset.item);return}
   if(e.target.closest('#add-item')){openItem(null);return}
-  if(e.target.closest('#open-search')){ $('#s-results').innerHTML=''; $('#dlg-search').showModal(); setTimeout(()=>$('#s-q').focus(),50); return }
+  if(e.target.closest('#open-search')){ const q=ui.q.trim(); $('#s-results').innerHTML=''; $('#s-q').value=q; $('#dlg-search').showModal(); if(q) $('#search-form').requestSubmit(); else setTimeout(()=>$('#s-q').focus(),50); return }
   if(e.target.closest('#backup-now')){ exportTrip(); return }
   const hit=e.target.closest('[data-hit]'); if(hit){ const h=searchHits[+hit.dataset.hit]; $('#dlg-search').close(); addPlaceAt({lat:+h.lat,lng:+h.lon},h.name||h.display_name.split(',')[0]); return }
   const ad=e.target.closest('[data-addat]'); if(ad){map.closePopup();openItem(null,{place:ad.dataset.addat,title:placeById(ad.dataset.addat).name});return}
@@ -734,7 +772,34 @@ $('#btn-locate').onclick=()=>{
 $('#menu-btn').onclick=()=>$('#dlg-menu').showModal();
 $('#menu-close').onclick=()=>$('#dlg-menu').close();
 $('#m-theme').onclick=()=>{const order=['system','light','dark'];const t=lsGet(THEME_KEY)||'system';lsSet(THEME_KEY,order[(order.indexOf(t)+1)%3]);applyTheme();renderStops();};
-$('#m-tiles').onclick=()=>{const keys=Object.keys(TILES);const k=tileCfg().key;lsSet(TILE_KEY,keys[(keys.indexOf(k)+1)%keys.length]);setTiles();toast('지도 스타일: '+tileCfg().name);};
+$('#m-tiles').onclick=()=>{const keys=Object.keys(TILES).filter(k=>k!=='vector'||vecOK);const k=tileCfg().key;lsSet(TILE_KEY,keys[(keys.indexOf(k)+1)%keys.length]);setTiles();toast('지도 종류: '+tileCfg().name);};
+$('#m-lang').onclick=()=>{const keys=Object.keys(LANGS);lsSet(LANG_KEY,keys[(keys.indexOf(mapLang())+1)%keys.length]);setTiles();toast('지도 글자: '+LANGS[mapLang()].split(' (')[0]);};
+/* 내장 지도 파일을 통째로 이 기기에 저장 (우리 저장소의 파일이라 제한 없음) */
+const mb=n=>(n/1048576).toFixed(n<10485760?1:0)+'MB';
+const mapUrl=f=>new URL(MAP_DIR+f,location.href).href;
+async function mapCachedBytes(){ try{ const c=await caches.open('map-v1'); let n=0; for(const f of MAP_FILES){ const r=await c.match(mapUrl(f)); if(!r) return 0; n+=+r.headers.get('Content-Length')||0; } return n||1; }catch(e){ return 0 } }
+async function mapLabel(){ if(!vecOK) return; const n=await mapCachedBytes(); $('#m-mapdl-sub').textContent=n?`이 기기에 저장됨 · ${mb(n)} · 다시 받으려면 누르세요`:'로마·피렌체·나폴리 지도를 통째로 저장해서 인터넷 없이도 보여요'; }
+let dlBusy=false;
+$('#m-mapdl').onclick=async()=>{
+  $('#dlg-menu').close(); if(dlBusy) return;
+  if(!('caches' in window)){ toast('이 브라우저는 오프라인 저장을 지원하지 않아요'); return }
+  dlBusy=true;
+  try{
+    const cache=await caches.open('map-v1'); let sum=0;
+    for(const f of MAP_FILES){
+      const r=await fetch(mapUrl(f),{cache:'no-store'}); if(!r.ok) throw new Error(f+' '+r.status);
+      const total=+r.headers.get('Content-Length')||0, parts=[]; let got=0, shown=0;
+      if(r.body&&r.body.getReader){ const rd=r.body.getReader(); for(;;){ const {done,value}=await rd.read(); if(done) break; parts.push(value); got+=value.length; if(got-shown>524288){ shown=got; toast(`지도 받는 중 · ${mb(sum+got)}${total?' ('+Math.round(got/total*100)+'%)':''}`,true); } } }
+      else parts.push(await r.arrayBuffer());
+      const blob=new Blob(parts,{type:'application/octet-stream'});
+      await cache.put(mapUrl(f),new Response(blob,{headers:{'Content-Type':'application/octet-stream','Content-Length':String(blob.size)}}));
+      sum+=blob.size;
+    }
+    try{ navigator.serviceWorker.controller.postMessage('maps-updated'); }catch(e){}
+    toast(`오프라인 지도를 저장했어요 · ${mb(sum)}`,{ms:5000}); mapLabel();
+  }catch(e){ toast('지도를 받지 못했어요. 인터넷 연결과 저장 공간을 확인해 주세요.',{ms:6000}); }
+  finally{ dlBusy=false; }
+};
 $('#m-reset').onclick=async()=>{
   if(!confirm('이 기기에서 고친 내용이 모두 사라지고 처음 데이터로 돌아가요. 계속할까요?')) return;
   try{S=await loadSeed();save();$('#dlg-menu').close();renderAll();fitDay();toast('처음 데이터로 되돌렸어요');}catch(e){toast('data.json을 불러오지 못했어요')}
@@ -822,7 +887,8 @@ $('#m-offline').onclick=async()=>{
   try{
     const names=await caches.keys(); const shell=names.some(k=>k.startsWith('trip-shell'));
     const n=(await (await caches.open('tiles-v2')).keys()).length;
-    toast(`${shell?'앱 파일 저장됨':'앱 파일이 아직 저장되지 않았어요'} · 지도 ${n}장 저장됨`,{ms:6000});
+    const m=vecOK?await mapCachedBytes():0;
+    toast(`${shell?'앱 파일 저장됨':'앱 파일이 아직 저장되지 않았어요'} · ${vecOK?(m?'내장 지도 저장됨 '+mb(m):'내장 지도는 아직 안 받았어요'):'지도 '+n+'장 저장됨'}`,{ms:6000});
   }catch(e){ toast('저장 상태를 확인하지 못했어요'); }
 };
 
