@@ -173,6 +173,7 @@ body.panel-off .panel{display:none}
 .group h3{font-size:12px;letter-spacing:.06em;color:var(--ink-3);margin:16px 0 6px;font-weight:600}
 .pl{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 0}
 .pl .sw{width:10px;height:10px;border-radius:50%;background:var(--cat)}
+.sub.addr{color:var(--ink);opacity:.82}
 .plr{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
 .plr .pl{border-bottom:0;flex:1;min-width:0;width:auto}
 .plr.off .pl{opacity:.45}
@@ -330,6 +331,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
   <form class="dlg" method="dialog" id="place-form">
     <h3 id="place-h">장소</h3>
     <label>이름<input id="p-name" type="text" required></label>
+    <label>주소<span class="row" style="flex-wrap:nowrap"><input id="p-addr" type="text" placeholder="주소" autocomplete="off" style="flex:1;min-width:0"><button type="button" class="btn" id="p-addr-find">찾기</button></span></label>
     <div class="two">
       <label>분류<select id="p-cat"></select></label>
       <label>도시<select id="p-city"><option value="rome">로마</option><option value="florence">피렌체</option><option value="naples">나폴리</option></select></label>
@@ -404,7 +406,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26h';
+const APP_VER='2026.11.26i';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','디저트·카페','관광','교통','기타'];
@@ -458,6 +460,11 @@ async function upgradeSeed(){
       const lx=cur.get(sx.id);
       if(!lx){ if(!S.deleted[sx.id]){ S[key].push(Object.assign({},sx,{u:stamp})); n++; } }
       else if(untouched(lx)&&strip(lx)!==strip(sx)){ for(const k of Object.keys(lx)) delete lx[k]; Object.assign(lx,sx,{u:stamp}); n++; }
+      else if(sx.addr&&!lx.addr){   // 직접 고친 장소는 그대로 두고 빈 주소만 채움
+        const head=sx.addr.split(',')[0]; lx.addr=sx.addr;
+        if(lx.note===head) lx.note=''; else if(typeof lx.note==='string'&&lx.note.startsWith(head+' · ')) lx.note=lx.note.slice(head.length+3);
+        lx.u=Math.max(lx.u||0,stamp); n++;
+      }
     }
     for(const id of seed.removed||[]){
       const lx=cur.get(id); if(!lx||!untouched(lx)||S.items.some(i=>i.place===id)) continue;
@@ -560,12 +567,12 @@ function renderPlaces(){
   if(!cats.includes(ui.cat)) ui.cat='전체';
   $('#place-chips').innerHTML=cats.map(c=>`<button type="button" class="chip" data-cat="${c}" aria-pressed="${ui.cat===c}">${c}</button>`).join('');
   const q=ui.q.trim().toLowerCase();
-  const list=S.places.filter(p=>p.city===d.city&&(ui.cat==='전체'||p.cat===ui.cat)&&(!q||(p.name+' '+(p.note||'')).toLowerCase().includes(q)));
+  const list=S.places.filter(p=>p.city===d.city&&(ui.cat==='전체'||p.cat===ui.cat)&&(!q||(p.name+' '+(p.addr||'')+' '+(p.note||'')).toLowerCase().includes(q)));
   const used=new Set(S.items.filter(i=>i.place).map(i=>i.place));
   const groups=CATS.map(c=>[c,list.filter(p=>p.cat===c)]).filter(g=>g[1].length);
   $('#place-list').innerHTML=groups.length?groups.map(([c,ps])=>`<div class="group"><h3>${c} · ${ps.length}</h3>${ps.map(p=>`
     <div class="plr ${ui.hidP[p.id]?'off':''}"><button type="button" class="pl" data-fly="${p.id}" style="--cat:${CAT_COLOR[p.cat]||'#777'}"><span class="sw"></span>
-    <span class="nm">${esc(p.name)}${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
+    <span class="nm">${esc(p.name)}${p.addr?`<span class="sub addr">${esc(p.addr)}</span>`:''}${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
     <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button><button type="button" class="icon-btn" data-pvis="${p.id}" aria-pressed="${!ui.hidP[p.id]}">${ui.hidP[p.id]?'숨김':'보임'}</button></div>`).join('')}</div>`).join(''):'<p class="empty">조건에 맞는 장소가 없어요.</p>';
   const nh=S.places.filter(p=>p.city===d.city&&ui.hidP[p.id]).length;
   $('#place-list').insertAdjacentHTML('beforeend',(nh?'<div class="backup" style="margin-top:14px"><span>지도에서 숨긴 장소 '+nh+'곳</span><button type="button" class="icon-btn" data-pvis-all>모두 보이기</button></div>':'')+'<button type="button" class="btn wide" id="open-search">'+(q?'“'+esc(ui.q.trim())+'” 새 장소로 찾아 추가':'+ 새 장소를 이름으로 찾아 추가')+'</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
@@ -652,7 +659,7 @@ function updLbl(){ const z=map.getZoom(), el=map.getContainer(); el.classList.to
 function cityColor(c){ return getComputedStyle(document.documentElement).getPropertyValue('--'+c).trim()||'#b0402f'; }
 function placePopup(p){
   const its=S.items.filter(i=>i.place===p.id).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  return `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(p.cat)}${p.conf&&p.conf!=='확인'?' · '+esc(p.conf):''}</div>${p.note?`<div class="sub memo">${esc(p.note)}</div>`:''}
+  return `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(p.cat)}${p.conf&&p.conf!=='확인'?' · '+esc(p.conf):''}</div>${p.addr?`<div class="sub addr">${esc(p.addr)}</div>`:''}${p.note?`<div class="sub memo">${esc(p.note)}</div>`:''}
    ${p.conf==='미확인'?'<div class="sub">구글맵에서 이름을 확인한 뒤 수정을 눌러 바꿔 주세요.</div>':''}
    ${its.length?`<div class="sub">${its.map(i=>esc(i.date.replace('-','/').replace(/^0/,''))+' '+esc(i.time)+' '+esc(i.title)).join('<br>')}</div>`:''}
    <div class="acts"><a href="${mapsUrl(p)}" target="_blank" rel="noopener">구글맵</a><a href="${dirUrl(p)}" target="_blank" rel="noopener">길찾기</a>
@@ -773,14 +780,35 @@ function delDrawing(id){ const rec=S.drawings.find(z=>z.id===id); if(!rec) retur
 let editPlace=null, newPlaceAt=null;
 $('#p-cat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join('');
 function nearestCity(lat,lng){let best='rome',bd=1e9;for(const k in CITY){const c=CITY[k].center;const dd=(c[0]-lat)**2+(c[1]-lng)**2;if(dd<bd){bd=dd;best=k}}return best}
-function addPlaceAt(ll,name){ editPlace=null; newPlaceAt=ll; $('#place-h').textContent='새 장소'; $('#p-name').value=name||''; $('#p-cat').value='관광'; $('#p-city').value=nearestCity(ll.lat,ll.lng); $('#p-note').value=''; $('#place-del').hidden=true; $('#dlg-place').showModal(); setTimeout(()=>$('#p-name').focus(),50); }
-function openPlace(id){ const p=placeById(id); if(!p) return; editPlace=id; newPlaceAt=null; $('#place-h').textContent='장소 수정'; $('#p-name').value=p.name; $('#p-cat').value=p.cat; $('#p-city').value=p.city; $('#p-note').value=p.note||''; $('#place-del').hidden=false; $('#dlg-place').showModal(); }
+/* 주소: 좌표로 찾음 (OpenStreetMap Nominatim, 장소 하나당 한 번만 요청) */
+let addrSeq=0, addrWait=null;
+function fmtAddr(h){
+  const a=h.address||{}, st=a.road||a.pedestrian||a.square||a.footway||a.path||'', city=a.city||a.town||a.village||a.municipality||'';
+  const line=[st&&(st+(a.house_number?' '+a.house_number:'')),city].filter(Boolean).join(', ');
+  return line||String(h.display_name||'').split(',').slice(0,3).join(',').trim();
+}
+async function lookupAddr(lat,lng){
+  const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=it&lat=${lat}&lon=${lng}`,{headers:{Accept:'application/json'}});
+  if(!r.ok) throw new Error(r.status); return fmtAddr(await r.json());
+}
+function fillAddr(lat,lng,force){
+  const seq=++addrSeq, el=$('#p-addr'); addrWait=null;
+  if(!navigator.onLine){ el.placeholder=force?'인터넷이 없어 찾지 못했어요':'주소 (직접 입력)'; return }
+  el.placeholder='주소 찾는 중…';
+  addrWait=lookupAddr(lat,lng).then(a=>{ if(seq===addrSeq&&$('#dlg-place').open){ el.placeholder=a?'주소':'주소를 찾지 못했어요'; if(a&&(force||!el.value.trim())) el.value=a; } return a; })
+    .catch(()=>{ if(seq===addrSeq) el.placeholder='주소를 찾지 못했어요 (직접 입력)'; return ''; });
+}
+$('#p-addr-find').onclick=()=>{ const q=editPlace?placeById(editPlace):newPlaceAt; if(q) fillAddr(q.lat,q.lng,true); };
+function addPlaceAt(ll,name){ editPlace=null; newPlaceAt=ll; $('#place-h').textContent='새 장소'; $('#p-name').value=name||''; $('#p-addr').value=''; fillAddr(ll.lat,ll.lng); $('#p-cat').value='관광'; $('#p-city').value=nearestCity(ll.lat,ll.lng); $('#p-note').value=''; $('#place-del').hidden=true; $('#dlg-place').showModal(); setTimeout(()=>$('#p-name').focus(),50); }
+function openPlace(id){ const p=placeById(id); if(!p) return; editPlace=id; newPlaceAt=null; addrSeq++; addrWait=null; $('#p-addr').value=p.addr||''; $('#p-addr').placeholder='주소'; $('#place-h').textContent='장소 수정'; $('#p-name').value=p.name; $('#p-cat').value=p.cat; $('#p-city').value=p.city; $('#p-note').value=p.note||''; $('#place-del').hidden=false; $('#dlg-place').showModal(); }
 $('#place-form').addEventListener('submit',e=>{
   e.preventDefault(); const name=$('#p-name').value.trim(); if(!name) return;
-  const rec={name,cat:$('#p-cat').value,city:$('#p-city').value,note:$('#p-note').value.trim(),u:now()};
+  const rec={name,cat:$('#p-cat').value,city:$('#p-city').value,addr:$('#p-addr').value.trim(),note:$('#p-note').value.trim(),u:now()};
   let made=null;
   if(editPlace) Object.assign(placeById(editPlace),rec,{conf:'확인'}); else { made=Object.assign({id:uid('p'),lat:+newPlaceAt.lat.toFixed(7),lng:+newPlaceAt.lng.toFixed(7),cid:null,conf:'확인'},rec); S.places.push(made); }
   commit(); $('#dlg-place').close(); renderAll(); toast('장소를 저장했어요'); if(made) flyTo(made.id);
+  // 주소가 도착하기 전에 저장했으면, 도착했을 때 채워 넣음
+  if(made&&!made.addr&&addrWait) addrWait.then(a=>{ if(a&&!made.addr&&S.places.includes(made)){ made.addr=a; made.u=now(); commit(); renderPlaces(); } });
 });
 $('#place-cancel').onclick=()=>$('#dlg-place').close();
 $('#place-del').onclick=()=>{ if(!editPlace) return; const id=editPlace, rec=placeById(id), linked=S.items.filter(i=>i.place===id);
@@ -929,7 +957,7 @@ $('#m-kml-out').onclick=()=>{
     out+='</Folder>';
   }
   out+='<Folder><name>장소 전체</name>';
-  for(const c of ['rome','florence','naples']){ out+=`<Folder><name>${CITY[c].name}</name>`; for(const p of S.places.filter(q=>q.city===c)) out+=pm(p.name,[p.cat,p.note,p.cid?'https://maps.google.com/?cid='+p.cid:''].filter(Boolean).join(' · '),pt(p)); out+='</Folder>'; }
+  for(const c of ['rome','florence','naples']){ out+=`<Folder><name>${CITY[c].name}</name>`; for(const p of S.places.filter(q=>q.city===c)) out+=pm(p.name,[p.cat,p.addr,p.note,p.cid?'https://maps.google.com/?cid='+p.cid:''].filter(Boolean).join(' · '),pt(p)); out+='</Folder>'; }
   out+='</Folder></Document></kml>';
   shareOrDownload('이탈리아여행-'+stamp()+'.kml',out,'application/vnd.google-earth.kml+xml');
 };

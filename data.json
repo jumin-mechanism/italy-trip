@@ -1,5 +1,5 @@
 {
-"version": 2,
+"version": 3,
 "title": "주민·윤진 이탈리아",
 "year": 2026,
 "days": [
@@ -79,12 +79,13 @@
 "id": "rome_hotel",
 "name": "Hotel Nazionale Roma",
 "cat": "숙소",
-"note": "Piazza di Monte Citorio 131 · +39 06 695001",
+"note": "+39 06 695001",
 "conf": "확인",
 "lat": 41.9009402,
 "lng": 12.4779341,
 "cid": "10799622378962391368",
-"city": "rome"
+"city": "rome",
+"addr": "Piazza di Monte Citorio 131, Roma"
 },
 {
 "id": "rome_r1",
@@ -106,7 +107,8 @@
 "lat": 41.8986108,
 "lng": 12.4768729,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Piazza della Rotonda, Roma"
 },
 {
 "id": "navona",
@@ -117,7 +119,8 @@
 "lat": 41.8991633,
 "lng": 12.4730742,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Piazza Navona, Roma"
 },
 {
 "id": "trevi",
@@ -128,7 +131,8 @@
 "lat": 41.9009325,
 "lng": 12.483313,
 "cid": "17759648132674796470",
-"city": "rome"
+"city": "rome",
+"addr": "Piazza di Trevi, Roma"
 },
 {
 "id": "coronari",
@@ -139,7 +143,8 @@
 "lat": 41.9004925,
 "lng": 12.4701843,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Via dei Coronari, Roma"
 },
 {
 "id": "forum",
@@ -161,7 +166,8 @@
 "lat": 41.8886559,
 "lng": 12.4875481,
 "cid": "5875129900000633134",
-"city": "rome"
+"city": "rome",
+"addr": "Via di San Gregorio 30, Roma"
 },
 {
 "id": "colosseum",
@@ -172,7 +178,8 @@
 "lat": 41.8902102,
 "lng": 12.4922309,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Piazza del Colosseo 1, Roma"
 },
 {
 "id": "borghese",
@@ -183,7 +190,8 @@
 "lat": 41.9142103,
 "lng": 12.4921442,
 "cid": "1996401362516081599",
-"city": "rome"
+"city": "rome",
+"addr": "Piazzale Scipione Borghese 5, Roma"
 },
 {
 "id": "spanish",
@@ -194,7 +202,8 @@
 "lat": 41.90599,
 "lng": 12.482775,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Piazza di Spagna, Roma"
 },
 {
 "id": "popolo",
@@ -205,7 +214,8 @@
 "lat": 41.9110163,
 "lng": 12.4762093,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Piazza del Popolo, Roma"
 },
 {
 "id": "cupola",
@@ -227,7 +237,8 @@
 "lat": 41.9064878,
 "lng": 12.4536413,
 "cid": "14979232533955483318",
-"city": "rome"
+"city": "rome",
+"addr": "Viale Vaticano, Città del Vaticano"
 },
 {
 "id": "stpeter",
@@ -238,7 +249,8 @@
 "lat": 41.9021667,
 "lng": 12.4539367,
 "cid": "8235940740917056131",
-"city": "rome"
+"city": "rome",
+"addr": "Piazza San Pietro, Città del Vaticano"
 },
 {
 "id": "trastevere",
@@ -249,7 +261,8 @@
 "lat": 41.889493,
 "lng": 12.4698361,
 "cid": null,
-"city": "rome"
+"city": "rome",
+"addr": "Piazza di Santa Maria in Trastevere, Roma"
 },
 {
 "id": "termini",
@@ -260,18 +273,20 @@
 "lat": 41.9012873,
 "lng": 12.5015756,
 "cid": "11831094480166037908",
-"city": "rome"
+"city": "rome",
+"addr": "Piazza dei Cinquecento, Roma"
 },
 {
 "id": "flo_hotel",
 "name": "Hotel Santa Maria Novella",
 "cat": "숙소",
-"note": "Piazza di Santa Maria Novella 1 · +39 055 271840",
+"note": "+39 055 271840",
 "conf": "확인",
 "lat": 43.7733923,
 "lng": 11.2501169,
 "cid": "6286678449244840782",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza di Santa Maria Novella 1, Firenze"
 },
 {
 "id": "flo_r2",
@@ -315,7 +330,8 @@
 "lat": 43.7765249,
 "lng": 11.2546373,
 "cid": "17124275527709318711",
-"city": "florence"
+"city": "florence",
+"addr": "Via Rosina 2r, Firenze"
 },
 {
 "id": "flo_r3",
@@ -381,7 +397,8 @@
 "lat": 43.7819929,
 "lng": 11.2604198,
 "cid": "14001773119209120616",
-"city": "florence"
+"city": "florence",
+"addr": "Via San Gallo 112r, Firenze"
 },
 {
 "id": "zaza",
@@ -392,7 +409,8 @@
 "lat": 43.7763546,
 "lng": 11.2544485,
 "cid": "9065319688451705659",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza del Mercato Centrale 26r, Firenze"
 },
 {
 "id": "mercato",
@@ -403,7 +421,8 @@
 "lat": 43.7764676,
 "lng": 11.2528338,
 "cid": "9070668327180047285",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza del Mercato Centrale, Firenze"
 },
 {
 "id": "flo_r6",
@@ -480,7 +499,8 @@
 "lat": 43.773145,
 "lng": 11.2559602,
 "cid": "6165783601337790965",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza del Duomo, Firenze"
 },
 {
 "id": "signoria",
@@ -491,7 +511,8 @@
 "lat": 43.7696855,
 "lng": 11.2556422,
 "cid": "11510190685880029293",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza della Signoria, Firenze"
 },
 {
 "id": "bardini1",
@@ -513,7 +534,8 @@
 "lat": 43.767925,
 "lng": 11.2531435,
 "cid": "4625490284655346408",
-"city": "florence"
+"city": "florence",
+"addr": "Ponte Vecchio, Firenze"
 },
 {
 "id": "pitti",
@@ -524,7 +546,8 @@
 "lat": 43.7651533,
 "lng": 11.2500081,
 "cid": "6688070730144370730",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza de' Pitti 1, Firenze"
 },
 {
 "id": "boboli",
@@ -535,7 +558,8 @@
 "lat": 43.7624972,
 "lng": 11.2483996,
 "cid": "291611336742525362",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza de' Pitti 1, Firenze"
 },
 {
 "id": "michelangelo",
@@ -546,7 +570,8 @@
 "lat": 43.7629314,
 "lng": 11.2650561,
 "cid": "13040006563833401625",
-"city": "florence"
+"city": "florence",
+"addr": "Piazzale Michelangelo, Firenze"
 },
 {
 "id": "scroce",
@@ -557,7 +582,8 @@
 "lat": 43.7685683,
 "lng": 11.2622677,
 "cid": "10340961167418266197",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza di Santa Croce 16, Firenze"
 },
 {
 "id": "medicee",
@@ -568,7 +594,8 @@
 "lat": 43.7750913,
 "lng": 11.2533903,
 "cid": "8254555520279015792",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza di Madonna degli Aldobrandini 6, Firenze"
 },
 {
 "id": "slorenzo",
@@ -579,7 +606,8 @@
 "lat": 43.7749619,
 "lng": 11.2538762,
 "cid": "17124867429501506284",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza di San Lorenzo 9, Firenze"
 },
 {
 "id": "repubblica",
@@ -601,7 +629,8 @@
 "lat": 43.7703981,
 "lng": 11.2580078,
 "cid": "2394959777485432300",
-"city": "florence"
+"city": "florence",
+"addr": "Via del Proconsolo 4, Firenze"
 },
 {
 "id": "buonarroti",
@@ -612,7 +641,8 @@
 "lat": 43.7698939,
 "lng": 11.2635908,
 "cid": "16326235363830930265",
-"city": "florence"
+"city": "florence",
+"addr": "Via Ghibellina 70, Firenze"
 },
 {
 "id": "accademia",
@@ -623,7 +653,8 @@
 "lat": 43.7768145,
 "lng": 11.2586424,
 "cid": null,
-"city": "florence"
+"city": "florence",
+"addr": "Via Ricasoli 58/60, Firenze"
 },
 {
 "id": "specola",
@@ -634,7 +665,8 @@
 "lat": 43.7644674,
 "lng": 11.2468809,
 "cid": "7818875545433168306",
-"city": "florence"
+"city": "florence",
+"addr": "Via Romana 17, Firenze"
 },
 {
 "id": "smn",
@@ -662,12 +694,13 @@
 "id": "nap_hotel",
 "name": "Napoliamo Guest House",
 "cat": "숙소",
-"note": "Corso Umberto I 22 · +39 338 535 4748",
+"note": "+39 338 535 4748",
 "conf": "확인",
 "lat": 40.8446609,
 "lng": 14.2563584,
 "cid": "11119266477875065218",
-"city": "naples"
+"city": "naples",
+"addr": "Corso Umberto I 22, Napoli"
 },
 {
 "id": "nap_r3",
@@ -700,7 +733,8 @@
 "lat": 40.8487619,
 "lng": 14.2594848,
 "cid": "5516613418199825114",
-"city": "naples"
+"city": "naples",
+"addr": "Via del Grande Archivio 23/24, Napoli"
 },
 {
 "id": "michele",
@@ -711,7 +745,8 @@
 "lat": 40.8497563,
 "lng": 14.2633002,
 "cid": "6535452230733379138",
-"city": "naples"
+"city": "naples",
+"addr": "Via Cesare Sersale 1, Napoli"
 },
 {
 "id": "dimatteo",
@@ -722,18 +757,20 @@
 "lat": 40.8512512,
 "lng": 14.2579677,
 "cid": "17070588764528483247",
-"city": "naples"
+"city": "naples",
+"addr": "Via dei Tribunali 94, Napoli"
 },
 {
 "id": "sorbillo",
 "name": "소르빌로 (Gino e Toto Sorbillo)",
 "cat": "식당",
-"note": "Via dei Tribunali 32 · 명단에 이름 적고 대기 · 일요일 휴무",
+"note": "명단에 이름 적고 대기 · 일요일 휴무",
 "conf": "확인",
 "lat": 40.8504105,
 "lng": 14.2553596,
 "cid": "13619709253352858852",
-"city": "naples"
+"city": "naples",
+"addr": "Via dei Tribunali 32, Napoli"
 },
 {
 "id": "fco",
@@ -755,18 +792,20 @@
 "lat": 43.7677856,
 "lng": 11.2553108,
 "cid": "14834496294842582221",
-"city": "florence"
+"city": "florence",
+"addr": "Piazzale degli Uffizi 6, Firenze"
 },
 {
 "id": "cuoio",
 "name": "스쿠올라 델 쿠오이오 (가죽 공방)",
 "cat": "관광",
-"note": "Via di S. Giuseppe 5/R",
+"note": "",
 "conf": "확인",
 "lat": 43.7676703,
 "lng": 11.2629727,
 "cid": null,
-"city": "florence"
+"city": "florence",
+"addr": "Via di S. Giuseppe 5/R, Firenze"
 },
 {
 "id": "armando",
@@ -777,7 +816,8 @@
 "lat": 41.8990581,
 "lng": 12.4761819,
 "cid": "10519819257705820414",
-"city": "rome"
+"city": "rome",
+"addr": "Salita de' Crescenzi 31, Roma"
 },
 {
 "id": "bonci",
@@ -788,7 +828,8 @@
 "lat": 41.9066758,
 "lng": 12.4466709,
 "cid": "7964466716394952010",
-"city": "rome"
+"city": "rome",
+"addr": "Via della Meloria 43, Roma"
 },
 {
 "id": "roscioli",
@@ -799,7 +840,8 @@
 "lat": 41.894256,
 "lng": 12.4742417,
 "cid": "2742538736156126537",
-"city": "rome"
+"city": "rome",
+"addr": "Via dei Giubbonari 21, Roma"
 },
 {
 "id": "pincio",
@@ -821,7 +863,8 @@
 "lat": 41.8851338,
 "lng": 12.48039,
 "cid": "268412999884687609",
-"city": "rome"
+"city": "rome",
+"addr": "Piazza Pietro d'Illiria, Roma"
 },
 {
 "id": "bucalapi",
@@ -832,7 +875,8 @@
 "lat": 43.7728483,
 "lng": 11.2512752,
 "cid": "1442705330277764046",
-"city": "florence"
+"city": "florence",
+"addr": "Via del Trebbio 1r, Firenze"
 },
 {
 "id": "atto",
@@ -843,7 +887,8 @@
 "lat": 43.7715125,
 "lng": 11.2573904,
 "cid": "15071229948798291981",
-"city": "florence"
+"city": "florence",
+"addr": "Via del Corso 6, Firenze"
 },
 {
 "id": "camillo",
@@ -854,7 +899,8 @@
 "lat": 43.7681122,
 "lng": 11.2499866,
 "cid": "1230134002786666267",
-"city": "florence"
+"city": "florence",
+"addr": "Borgo San Jacopo 57r, Firenze"
 },
 {
 "id": "giovanni",
@@ -865,7 +911,8 @@
 "lat": 43.767593,
 "lng": 11.245948,
 "cid": "2199231711220092795",
-"city": "florence"
+"city": "florence",
+"addr": "Via Sant'Agostino 38r, Firenze"
 },
 {
 "id": "pazzi",
@@ -876,7 +923,8 @@
 "lat": 43.769634,
 "lng": 11.2609566,
 "cid": "9336182901156404733",
-"city": "florence"
+"city": "florence",
+"addr": "Via dei Lavatoi 3r, Firenze"
 },
 {
 "id": "ost_sspirito",
@@ -887,7 +935,8 @@
 "lat": 43.76652,
 "lng": 11.246794,
 "cid": "8779609045513250019",
-"city": "florence"
+"city": "florence",
+"addr": "Piazza Santo Spirito 16r, Firenze"
 },
 {
 "id": "sostanza",
@@ -898,7 +947,8 @@
 "lat": 43.7726719,
 "lng": 11.2470175,
 "cid": "1434597985181864841",
-"city": "florence"
+"city": "florence",
+"addr": "Via del Porcellana 25r, Firenze"
 },
 {
 "id": "napoli_c",
@@ -909,7 +959,8 @@
 "lat": 40.8521636,
 "lng": 14.2727884,
 "cid": "4183946364251989275",
-"city": "naples"
+"city": "naples",
+"addr": "Piazza Giuseppe Garibaldi, Napoli"
 },
 {
 "id": "sansevero",
@@ -920,7 +971,8 @@
 "lat": 40.8492951,
 "lng": 14.2548837,
 "cid": "2301883066721243441",
-"city": "naples"
+"city": "naples",
+"addr": "Via Francesco de Sanctis 19/21, Napoli"
 },
 {
 "id": "sga",
@@ -931,7 +983,8 @@
 "lat": 40.8499155,
 "lng": 14.2579103,
 "cid": "53877111129085546",
-"city": "naples"
+"city": "naples",
+"addr": "Via San Gregorio Armeno, Napoli"
 },
 {
 "id": "pompeii",
@@ -953,7 +1006,8 @@
 "lat": 40.6262287,
 "lng": 14.3756451,
 "cid": "17146200597343378009",
-"city": "naples"
+"city": "naples",
+"addr": "Piazza Tasso, Sorrento"
 }
 ],
 "items": [
@@ -1726,7 +1780,7 @@
 "label": "피렌체 첫 산책 (구글어스)"
 }
 ],
-"stamp": 1795659149976,
+"stamp": 1795692376794,
 "removed": [
 "bardini2"
 ]
