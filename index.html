@@ -89,8 +89,17 @@ button{cursor:pointer}
   .layout{grid-template-columns:1fr;grid-template-rows:42% 1fr}
   .mapwrap{order:0;border-bottom:1px solid var(--line)}
   .panel{order:1;border-right:0}
-  body.map-big .layout{grid-template-rows:78% 1fr}
+  body.panel-off .layout{grid-template-rows:1fr}
 }
+body.panel-off .layout{grid-template-columns:1fr}
+body.panel-off .panel{display:none}
+.tabs .fold{margin-left:auto;align-self:center;border:1px solid var(--line);border-radius:7px;padding:3px 9px;margin-bottom:6px;font-size:12.5px;color:var(--ink-2)}
+.map-tools .cat-pop{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:var(--shadow)}
+.map-tools .cat-pop button{display:flex;align-items:center;gap:7px;box-shadow:none;border-color:transparent;background:none;color:var(--ink-3);padding:5px 8px}
+.map-tools .cat-pop button[aria-pressed="true"]{background:var(--surface-2);color:var(--ink)}
+.cat-pop .sw{width:18px;height:18px;border-radius:50%;background:var(--c);display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700;flex:none}
+.cat-pop button[aria-pressed="false"] .sw{background:var(--ink-3);opacity:.45}
+.cat-pop .all{border-bottom:1px solid var(--line);border-radius:7px 7px 0 0;margin-bottom:2px}
 .map-tools{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;z-index:450;display:flex;flex-direction:column;gap:6px}
 .map-tools button{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow);text-align:left}
 .map-tools button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
@@ -100,6 +109,8 @@ button{cursor:pointer}
   .leaflet-control-zoom{display:none}
   .map-tools{top:auto;bottom:22px;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;left:60px}
   .map-tools button{padding:5px 8px;font-size:12px}
+  .map-tools .cat-pop{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;flex-basis:100%;order:-1}
+  .cat-pop .all{border-bottom:0;margin-bottom:0}
   .leaflet-pm-toolbar .button-container a.leaflet-buttons-control-button{width:30px;height:30px}
   .brand .route{display:none}
   .brand h1{flex:1}
@@ -242,6 +253,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
       <button role="tab" id="tab-plan-btn" data-tab="plan" aria-selected="true">일정</button>
       <button role="tab" id="tab-places-btn" data-tab="places" aria-selected="false">장소<span class="count" id="places-count"></span></button>
       <button role="tab" id="tab-draw-btn" data-tab="draw" aria-selected="false">그린 경로<span class="count" id="draw-count"></span></button>
+      <button type="button" class="fold" id="panel-hide">접기</button>
     </div>
     <div class="tabbody" id="tab-plan"></div>
     <div class="tabbody" id="tab-places" hidden>
@@ -259,8 +271,9 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
     <div class="map-tools">
       <button type="button" id="btn-locate">내 위치</button>
       <button type="button" id="btn-line" aria-pressed="true">동선 잇기</button>
-      <button type="button" id="btn-allpl" aria-pressed="true">도시 장소</button>
-      <button type="button" id="btn-big" class="only-mobile" aria-pressed="false">지도 크게</button>
+      <button type="button" id="btn-allpl" aria-pressed="true" aria-expanded="false">장소 ▾</button>
+      <div class="cat-pop" id="cat-pop" hidden></div>
+      <button type="button" id="btn-panel" aria-pressed="false">일정 접기</button>
     </div>
   </section>
 </main>
@@ -379,7 +392,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26c';
+const APP_VER='2026.11.26d';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','카페','관광','교통','기타'];
@@ -404,8 +417,10 @@ const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
 
 let S=null;            // state
-let ui={day:null,tab:'plan',line:true,allpl:true,cat:'전체',q:''};
+let ui={day:null,tab:'plan',line:true,cat:'전체',q:'',cats:null,panel:true};
 try{Object.assign(ui,JSON.parse(lsGet(UI_KEY)||'{}'))}catch(e){}
+if(!ui.cats){ ui.cats={}; for(const c of ['숙소','식당','카페','관광','교통','기타']) ui.cats[c]=ui.allpl!==false; }
+delete ui.allpl;
 
 /* ---------- state ---------- */
 function normalize(d){
@@ -466,7 +481,7 @@ function save(quiet){
 let meta={n:0,last:0}; try{ Object.assign(meta,JSON.parse(lsGet(META_KEY)||'{}')); }catch(e){}
 function markDirty(){ if(!sync) return; sync.dirty=true; syncSeq++; lsSet(SYNC_KEY,JSON.stringify(sync)); clearTimeout(syncT); syncT=setTimeout(syncNow,1500); }
 function commit(){ clearTimeout(saveT); saveT=setTimeout(()=>save(),150); meta.n++; lsSet(META_KEY,JSON.stringify(meta)); markDirty(); }
-function saveUI(){ lsSet(UI_KEY,JSON.stringify({day:ui.day,tab:ui.tab,line:ui.line,allpl:ui.allpl,cat:ui.cat})); }
+function saveUI(){ lsSet(UI_KEY,JSON.stringify({day:ui.day,tab:ui.tab,line:ui.line,cat:ui.cat,cats:ui.cats,panel:ui.panel})); }
 function pickToday(){
   try{
     const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -619,7 +634,7 @@ function renderPlacesLayer(){
   const used=new Set(dayItems(d.date).map(i=>i.place).filter(Boolean));
   for(const p of S.places){
     if(used.has(p.id)) continue;
-    const show=ui.allpl?(p.city===d.city||p.cat==='교통'):false; if(!show) continue;
+    if(!ui.cats[p.cat]||!(p.city===d.city||p.cat==='교통')) continue;
     const m=L.marker([p.lat,p.lng],{icon:dotIcon(CAT_COLOR[p.cat]||'#777',p.conf==='미확인',CAT_GLYPH[p.cat]),pmIgnore:true,keyboard:false,title:p.name}).bindPopup(()=>placePopup(p),{maxWidth:280}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[12,0],className:'nm'});
     m.addTo(placeLayer); markers[p.id]=m;
   }
@@ -758,9 +773,29 @@ document.addEventListener('click',e=>{
 $('#place-chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;ui.cat=b.dataset.cat;saveUI();renderPlaces();});
 $('#place-q').addEventListener('input',e=>{ui.q=e.target.value;renderPlaces();});
 $('#btn-line').onclick=()=>{ui.line=!ui.line;saveUI();$('#btn-line').setAttribute('aria-pressed',ui.line);renderStops();};
-$('#btn-allpl').onclick=()=>{ui.allpl=!ui.allpl;saveUI();$('#btn-allpl').setAttribute('aria-pressed',ui.allpl);renderPlacesLayer();};
-$('#btn-big').onclick=()=>{const on=!document.body.classList.contains('map-big');document.body.classList.toggle('map-big',on);$('#btn-big').setAttribute('aria-pressed',on);$('#btn-big').textContent=on?'지도 작게':'지도 크게';setTimeout(()=>map.invalidateSize(),60);};
-$('#btn-line').setAttribute('aria-pressed',ui.line); $('#btn-allpl').setAttribute('aria-pressed',ui.allpl);
+/* 장소 종류별로 지도에 보이기/숨기기 */
+function renderCats(){
+  const on=CATS.filter(c=>ui.cats[c]).length;
+  $('#btn-allpl').setAttribute('aria-pressed',on>0); $('#btn-allpl').textContent=(on===CATS.length?'장소':on?`장소 ${on}/${CATS.length}`:'장소 숨김')+' ▾';
+  $('#cat-pop').innerHTML=`<button type="button" class="all" data-cat-all aria-pressed="${on===CATS.length}">${on===CATS.length?'모두 숨기기':'모두 보이기'}</button>`+
+    CATS.map(c=>`<button type="button" data-cat-toggle="${c}" aria-pressed="${!!ui.cats[c]}" style="--c:${CAT_COLOR[c]}"><span class="sw">${CAT_GLYPH[c]}</span>${c}</button>`).join('');
+}
+$('#btn-allpl').onclick=()=>{ const pop=$('#cat-pop'); pop.hidden=!pop.hidden; $('#btn-allpl').setAttribute('aria-expanded',!pop.hidden); };
+$('#cat-pop').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.hasAttribute('data-cat-all')){ const all=CATS.every(c=>ui.cats[c]); for(const c of CATS) ui.cats[c]=!all; }
+  else ui.cats[b.dataset.catToggle]=!ui.cats[b.dataset.catToggle];
+  saveUI(); renderCats(); renderPlacesLayer();
+});
+/* 일정 패널 접기/펴기 (PC는 왼쪽, 폰은 아래쪽) */
+function setPanel(on){
+  ui.panel=on; saveUI(); document.body.classList.toggle('panel-off',!on);
+  $('#btn-panel').textContent=on?'일정 접기':'일정 펴기'; $('#btn-panel').setAttribute('aria-pressed',!on);
+  if(map) setTimeout(()=>map.invalidateSize(),60);
+}
+$('#btn-panel').onclick=()=>setPanel(!ui.panel);
+$('#panel-hide').onclick=()=>setPanel(false);
+$('#btn-line').setAttribute('aria-pressed',ui.line); renderCats(); setPanel(ui.panel!==false);
 $('#btn-locate').onclick=()=>{
   if(!navigator.geolocation){toast('이 브라우저에서는 위치를 쓸 수 없어요');return}
   toast('위치를 찾는 중…');
