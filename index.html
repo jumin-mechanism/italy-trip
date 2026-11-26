@@ -172,6 +172,10 @@ body.panel-off .panel{display:none}
 .group h3{font-size:12px;letter-spacing:.06em;color:var(--ink-3);margin:16px 0 6px;font-weight:600}
 .pl{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 0}
 .pl .sw{width:10px;height:10px;border-radius:50%;background:var(--cat)}
+.plr{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.plr .pl{border-bottom:0;flex:1;min-width:0;width:auto}
+.plr.off .pl{opacity:.45}
+.plr .icon-btn{flex:none}
 .pl .nm{font-weight:600;font-size:14px;min-width:0;overflow-wrap:anywhere}
 .pl .sub{display:block;font-size:12px;color:var(--ink-2);font-weight:400}
 .pl .conf{font-size:11px;color:var(--ink-3);white-space:nowrap}
@@ -398,7 +402,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26e';
+const APP_VER='2026.11.26f';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','카페','관광','교통','기타'];
@@ -423,7 +427,7 @@ const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
 
 let S=null;            // state
-let ui={day:null,tab:'plan',line:true,cat:'전체',q:'',cats:null,panel:true,hid:{}};
+let ui={day:null,tab:'plan',line:true,cat:'전체',q:'',cats:null,panel:true,hid:{},hidP:{}};
 try{Object.assign(ui,JSON.parse(lsGet(UI_KEY)||'{}'))}catch(e){}
 if(!ui.cats){ ui.cats={}; for(const c of ['숙소','식당','카페','관광','교통','기타']) ui.cats[c]=ui.allpl!==false; }
 delete ui.allpl;
@@ -487,7 +491,7 @@ function save(quiet){
 let meta={n:0,last:0}; try{ Object.assign(meta,JSON.parse(lsGet(META_KEY)||'{}')); }catch(e){}
 function markDirty(){ if(!sync) return; sync.dirty=true; syncSeq++; lsSet(SYNC_KEY,JSON.stringify(sync)); clearTimeout(syncT); syncT=setTimeout(syncNow,1500); }
 function commit(){ clearTimeout(saveT); saveT=setTimeout(()=>save(),150); meta.n++; lsSet(META_KEY,JSON.stringify(meta)); markDirty(); }
-function saveUI(){ lsSet(UI_KEY,JSON.stringify({day:ui.day,tab:ui.tab,line:ui.line,cat:ui.cat,cats:ui.cats,panel:ui.panel,hid:ui.hid})); }
+function saveUI(){ lsSet(UI_KEY,JSON.stringify({day:ui.day,tab:ui.tab,line:ui.line,cat:ui.cat,cats:ui.cats,panel:ui.panel,hid:ui.hid,hidP:ui.hidP})); }
 function pickToday(){
   try{
     const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -554,10 +558,11 @@ function renderPlaces(){
   const used=new Set(S.items.filter(i=>i.place).map(i=>i.place));
   const groups=CATS.map(c=>[c,list.filter(p=>p.cat===c)]).filter(g=>g[1].length);
   $('#place-list').innerHTML=groups.length?groups.map(([c,ps])=>`<div class="group"><h3>${c} · ${ps.length}</h3>${ps.map(p=>`
-    <button type="button" class="pl" data-fly="${p.id}" style="--cat:${CAT_COLOR[p.cat]||'#777'}"><span class="sw"></span>
+    <div class="plr ${ui.hidP[p.id]?'off':''}"><button type="button" class="pl" data-fly="${p.id}" style="--cat:${CAT_COLOR[p.cat]||'#777'}"><span class="sw"></span>
     <span class="nm">${esc(p.name)}${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
-    <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button>`).join('')}</div>`).join(''):'<p class="empty">조건에 맞는 장소가 없어요.</p>';
-  $('#place-list').insertAdjacentHTML('beforeend','<button type="button" class="btn wide" id="open-search">'+(q?'“'+esc(ui.q.trim())+'” 새 장소로 찾아 추가':'+ 새 장소를 이름으로 찾아 추가')+'</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
+    <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button><button type="button" class="icon-btn" data-pvis="${p.id}" aria-pressed="${!ui.hidP[p.id]}">${ui.hidP[p.id]?'숨김':'보임'}</button></div>`).join('')}</div>`).join(''):'<p class="empty">조건에 맞는 장소가 없어요.</p>';
+  const nh=S.places.filter(p=>p.city===d.city&&ui.hidP[p.id]).length;
+  $('#place-list').insertAdjacentHTML('beforeend',(nh?'<div class="backup" style="margin-top:14px"><span>지도에서 숨긴 장소 '+nh+'곳</span><button type="button" class="icon-btn" data-pvis-all>모두 보이기</button></div>':'')+'<button type="button" class="btn wide" id="open-search">'+(q?'“'+esc(ui.q.trim())+'” 새 장소로 찾아 추가':'+ 새 장소를 이름으로 찾아 추가')+'</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
 }
 function renderDraw(){
   const d=day(); if(!d) return;
@@ -644,7 +649,7 @@ function placePopup(p){
    ${p.conf==='미확인'?'<div class="sub">구글맵에서 이름을 확인한 뒤 수정을 눌러 바꿔 주세요.</div>':''}
    ${its.length?`<div class="sub">${its.map(i=>esc(i.date.replace('-','/').replace(/^0/,''))+' '+esc(i.time)+' '+esc(i.title)).join('<br>')}</div>`:''}
    <div class="acts"><a href="${mapsUrl(p)}" target="_blank" rel="noopener">구글맵</a><a href="${dirUrl(p)}" target="_blank" rel="noopener">길찾기</a>
-   <button type="button" data-addat="${p.id}">이 날 일정에 추가</button><button type="button" data-editpl="${p.id}">수정</button></div></div>`;
+   <button type="button" data-addat="${p.id}">이 날 일정에 추가</button><button type="button" data-editpl="${p.id}">수정</button><button type="button" data-pvis="${p.id}">${ui.hidP[p.id]?'지도에 보이기':'지도에서 숨기기'}</button></div></div>`;
 }
 const markers={};
 function renderMap(){ renderPlacesLayer(); renderStops(); renderDrawLayer(); }
@@ -654,7 +659,7 @@ function renderPlacesLayer(){
   const used=new Set(dayItems(d.date).map(i=>i.place).filter(Boolean));
   for(const p of S.places){
     if(used.has(p.id)) continue;
-    if(!ui.cats[p.cat]||!(p.city===d.city||p.cat==='교통')) continue;
+    if(ui.hidP[p.id]||!ui.cats[p.cat]||!(p.city===d.city||p.cat==='교통')) continue;
     const m=L.marker([p.lat,p.lng],{icon:dotIcon(CAT_COLOR[p.cat]||'#777',p.conf==='미확인',CAT_GLYPH[p.cat]),pmIgnore:true,keyboard:false,title:p.name}).bindPopup(()=>placePopup(p),{maxWidth:280}).bindTooltip(esc(p.name),{permanent:true,direction:'right',offset:[12,0],className:'nm'});
     m.addTo(placeLayer); markers[p.id]=m;
   }
@@ -788,6 +793,8 @@ document.addEventListener('click',e=>{
   const ad=e.target.closest('[data-addat]'); if(ad){map.closePopup();openItem(null,{place:ad.dataset.addat,title:placeById(ad.dataset.addat).name});return}
   const ep=e.target.closest('[data-editpl]'); if(ep){map.closePopup();openPlace(ep.dataset.editpl);return}
   const dr=e.target.closest('[data-draw]'); if(dr){openDraw(dr.dataset.draw);return}
+  const pv=e.target.closest('[data-pvis]'); if(pv){ const id=pv.dataset.pvis; if(ui.hidP[id]) delete ui.hidP[id]; else ui.hidP[id]=1; saveUI(); map.closePopup(); renderPlaces(); renderPlacesLayer(); return }
+  if(e.target.closest('[data-pvis-all]')){ const c=day().city; for(const q of S.places) if(q.city===c) delete ui.hidP[q.id]; saveUI(); renderPlaces(); renderPlacesLayer(); return }
   const v=e.target.closest('[data-vis]'); if(v){ setRouteVis(v.dataset.vis,!!ui.hid[v.dataset.vis]); routesChanged(); return }
   const z=e.target.closest('[data-zoom]'); if(z){const x=S.drawings.find(q=>q.id===z.dataset.zoom); if(x){ if(ui.hid[x.id]){ setRouteVis(x.id,true); routesChanged(); } if(x.latlngs.length>1) map.fitBounds(L.latLngBounds(x.latlngs).pad(.2)); else map.setView(x.latlngs[0],16);} return}
 });
@@ -822,7 +829,7 @@ function setPanel(on){
 }
 $('#btn-panel').onclick=()=>setPanel(!ui.panel);
 $('#panel-hide').onclick=()=>setPanel(false);
-if(!ui.hid||typeof ui.hid!=='object') ui.hid={}; renderCats(); setPanel(ui.panel!==false);
+if(!ui.hid||typeof ui.hid!=='object') ui.hid={}; if(!ui.hidP||typeof ui.hidP!=='object') ui.hidP={}; renderCats(); setPanel(ui.panel!==false);
 $('#btn-locate').onclick=()=>{
   if(!navigator.geolocation){toast('이 브라우저에서는 위치를 쓸 수 없어요');return}
   toast('위치를 찾는 중…');
