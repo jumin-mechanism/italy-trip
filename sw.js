@@ -1,5 +1,5 @@
 // 이탈리아 여행 앱 서비스 워커: 앱 파일·지도 타일·글꼴을 저장해 오프라인에서도 열리게 함
-const SHELL_V = 'trip-shell-v10', TILES = 'tiles-v2', FONTS = 'fonts-v1', MAPS = 'map-v1';
+const SHELL_V = 'trip-shell-v11', TILES = 'tiles-v2', FONTS = 'fonts-v1', MAPS = 'map-v1';
 const SHELL = ['./', 'index.html', 'data.json', 'manifest.webmanifest',
   'vendor/leaflet.js', 'vendor/leaflet.css', 'vendor/leaflet-geoman.min.js', 'vendor/leaflet-geoman.css', 'vendor/protomaps-leaflet.js',
   'vendor/images/marker-icon.png', 'vendor/images/marker-icon-2x.png', 'vendor/images/marker-shadow.png',
