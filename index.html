@@ -209,6 +209,10 @@ button.daynote{width:calc(100%);border:0;text-align:left;font-family:inherit}
 .help{font-size:13px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:9px 11px;margin-bottom:12px}
 .dr{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;border-bottom:1px solid var(--line);padding:9px 0}
 .dr .swl{width:22px;height:4px;border-radius:2px;background:var(--c)}
+.seg-pick{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:460;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:5px 6px 5px 10px;font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.seg-pick .seg button{padding:5px 12px;font-size:12.5px}
+@media (max-width:760px){.seg-pick{top:auto;bottom:64px;left:56px;transform:none}}
+.dr.mix .swl{background:linear-gradient(90deg,var(--c) 0 45%,transparent 45% 58%,var(--c) 58% 70%,transparent 70% 83%,var(--c) 83%)}
 .dr.dash .swl{height:0;background:none;border-top:4px dotted var(--c)}
 .dr .sub.memo{white-space:pre-line;overflow-wrap:anywhere;color:var(--ink-2)}
 .cat-pop .sw.ln.dot{height:0;background:none;border-top:4px dotted var(--c)}
@@ -307,6 +311,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
   </section>
   <section class="mapwrap">
     <div id="map" aria-label="지도"></div>
+    <div class="seg-pick" id="seg-pick" hidden><span>다음 구간</span><div class="seg" id="seg-next"><button type="button" data-v="" aria-pressed="true">실선</button><button type="button" data-v="1" aria-pressed="false">점선</button></div></div>
     <div class="map-tools">
       <button type="button" id="btn-locate">내 위치</button>
       <button type="button" id="btn-route" aria-pressed="true" aria-expanded="false">경로 ▾</button>
@@ -348,8 +353,13 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
     <label>날짜<select id="d-date"></select></label>
     <div><div class="sect" style="margin:0 0 6px">색</div><div class="colors" id="d-colors"></div></div>
     <div id="d-dash-wrap">
-      <div class="sect" style="margin:0 0 4px">선 모양</div>
+      <div class="sect" style="margin:0 0 4px" id="d-dash-h">선 모양 (전체)</div>
       <div class="seg" id="d-dash"><button type="button" data-v="">실선</button><button type="button" data-v="1">점선</button></div>
+      <div id="d-seg-wrap" hidden>
+        <div class="sect" style="margin:10px 0 4px" id="d-seg-h">누른 구간</div>
+        <div class="seg" id="d-seg"><button type="button" data-v="">실선</button><button type="button" data-v="1">점선</button></div>
+      </div>
+      <p class="hint" id="d-seg-hint" style="margin-top:6px">구간 하나만 바꾸려면 지도에서 그 구간을 누르세요.</p>
     </div>
     <label>메모<textarea id="d-note" placeholder="이동 수단, 걸리는 시간, 주의할 점 등"></textarea></label>
     <div class="foot">
@@ -452,7 +462,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26n';
+const APP_VER='2026.11.26o';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','디저트·카페','관광','교통','기타'];
@@ -645,8 +655,8 @@ function renderPlaces(){
 function renderDraw(){
   const d=day(); if(!d) return;
   const ds=S.drawings.filter(x=>x.date===d.date);
-  $('#draw-list').innerHTML=ds.length?ds.map(x=>`<div class="dr ${x.dash?'dash':''}" style="--c:${x.color}"><span class="swl"></span>
-     <button type="button" class="nm" data-draw="${x.id}">${esc(x.label||'이름 없음')}<span class="sub">${{line:'선',polygon:'영역',note:'메모 핀'}[x.type]||x.type}${x.type==='line'?' · '+fmtKm(lineLen(x.latlngs)):''}${x.dash?' · 점선':''}</span>${x.note?`<span class="sub memo">${esc(x.note)}</span>`:''}</button>
+  $('#draw-list').innerHTML=ds.length?ds.map(x=>`<div class="dr ${{dash:'dash',mix:'mix'}[styleOf(x)]||''}" style="--c:${x.color}"><span class="swl"></span>
+     <button type="button" class="nm" data-draw="${x.id}">${esc(x.label||'이름 없음')}<span class="sub">${{line:'선',polygon:'영역',note:'메모 핀'}[x.type]||x.type}${x.type==='line'?' · '+fmtKm(lineLen(x.latlngs)):''}${{dash:' · 점선',mix:' · 실선+점선'}[styleOf(x)]||''}</span>${x.note?`<span class="sub memo">${esc(x.note)}</span>`:''}</button>
      <button type="button" class="icon-btn" data-vis="${x.id}" aria-pressed="${!ui.hid[x.id]}">${ui.hid[x.id]?'숨김':'보임'}</button>
      <button type="button" class="icon-btn" data-zoom="${x.id}">위치</button></div>`).join(''):'<p class="empty">이 날짜에 그린 경로가 없어요.</p>';
   for(const el of document.querySelectorAll('#draw-list .dr')){ const b=el.querySelector('[data-vis]'); el.classList.toggle('off',!!ui.hid[b.dataset.vis]); }
@@ -660,7 +670,7 @@ function renderRoutes(){
   $('#route-pop').innerHTML=`<button type="button" class="all" data-route-all aria-pressed="${on===total}">${on===total?'모두 숨기기':'모두 보이기'}</button>`+
     `<button type="button" data-route="line" aria-pressed="${!!ui.line}" style="--c:${d?cityColor(d.city):'#777'}"><span class="sw ${ui.lineSolid?'ln':'dash'}"></span>일정 순서 선</button>`+
     `<button type="button" class="opt" data-line-style>선 모양: ${ui.lineSolid?'실선':'점선'} · 바꾸기</button>`+
-    ds.map(x=>`<button type="button" data-route="${x.id}" aria-pressed="${!ui.hid[x.id]}" style="--c:${x.color}"><span class="sw ln ${x.dash?'dot':''}"></span><span class="rn">${esc(x.label||'이름 없음')}</span></button>`).join('');
+    ds.map(x=>`<button type="button" data-route="${x.id}" aria-pressed="${!ui.hid[x.id]}" style="--c:${x.color}"><span class="sw ln ${styleOf(x)==='dash'?'dot':''}"></span><span class="rn">${esc(x.label||'이름 없음')}</span></button>`).join('');
 }
 function setRouteVis(id,show){ if(id==='line') ui.line=show; else if(show) delete ui.hid[id]; else ui.hid[id]=1; }
 function routesChanged(){ saveUI(); renderStops(); renderDrawLayer(); renderDraw(); }
@@ -668,6 +678,9 @@ function lineLen(ll){let s=0;for(let i=1;i<ll.length;i++) s+=L.latLng(ll[i-1]).d
 const fmtKm=m=>m>=1000?(m/1000).toFixed(1)+'km':Math.round(m)+'m';
 
 /* ---------- map ---------- */
+let drawSeg={styles:[],cur:0,temp:null,color:'#2f6fb0'};
+function setNextSeg(v){ drawSeg.cur=v?1:0; for(const b of $('#seg-next').children) b.setAttribute('aria-pressed',(b.dataset.v==='1')===!!v); }
+$('#seg-next').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) setNextSeg(b.dataset.v==='1'); });
 let map, tileLayer, placeLayer, stopLayer, drawLayer, meLayer;
 function tileCfg(){ let k=lsGet(TILE_KEY)||(vecOK?'vector':'osm'); if(!TILES[k]||(k==='vector'&&!vecOK)) k='osm'; return Object.assign({key:k},TILES[k]); }
 function isDark(){ const t=document.documentElement.getAttribute('data-theme'); return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches; }
@@ -703,11 +716,26 @@ function buildMap(){
     let rec;
     if(e.shape==='Marker'){ rec={id:uid('d'),date:d.date,type:'note',latlngs:[[lyr.getLatLng().lat,lyr.getLatLng().lng]],color,label:'',u:now()}; }
     else if(e.shape==='Polygon'){ rec={id:uid('d'),date:d.date,type:'polygon',latlngs:lyr.getLatLngs()[0].map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]),color,label:'',u:now()}; }
-    else { rec={id:uid('d'),date:d.date,type:'line',latlngs:lyr.getLatLngs().map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]),color,label:'',u:now()}; }
+    else {
+      rec={id:uid('d'),date:d.date,type:'line',latlngs:lyr.getLatLngs().map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]),color,label:'',u:now()};
+      const st=drawSeg.styles.slice(0,rec.latlngs.length-1); while(st.length<rec.latlngs.length-1) st.push(0);
+      if(st.some(v=>v!==st[0])) rec.seg=st; else rec.dash=!!st[0];
+    }
     map.removeLayer(lyr); S.drawings.push(rec); commit(); renderDrawLayer(); renderDraw(); renderTabs();
     openDraw(rec.id,true);
   });
   map.on('pm:remove',e=>{ const id=e.layer._drawId; if(!id) return; delDrawing(id); });
+  // 선을 그리는 동안: 다음에 찍는 점까지의 구간을 실선으로 할지 점선으로 할지 고름
+  map.on('pm:drawstart',e=>{
+    if(e.shape!=='Line') return;
+    const d=day(), wl=e.workingLayer;
+    drawSeg={styles:[],cur:0,temp:L.layerGroup().addTo(map),color:DRAW_COLORS[S.drawings.filter(x=>x.date===d.date).length%DRAW_COLORS.length]};
+    setNextSeg(0); $('#seg-pick').hidden=false; try{ wl.setStyle({opacity:.15}); }catch(err){}
+    const redraw=()=>{ const ll=wl.getLatLngs().map(p=>[p.lat,p.lng]); drawSeg.temp.clearLayers(); for(const r of runLines(ll,drawSeg.styles.slice(0,Math.max(0,ll.length-1)),drawSeg.color)) drawSeg.temp.addLayer(r); };
+    wl.on('pm:vertexadded',()=>{ const n=wl.getLatLngs().length; drawSeg.styles.length=Math.min(drawSeg.styles.length,Math.max(0,n-2)); while(drawSeg.styles.length<n-2) drawSeg.styles.push(0); if(n>=2) drawSeg.styles.push(drawSeg.cur); redraw(); });
+    wl.on('pm:vertexremoved',()=>{ drawSeg.styles.length=Math.min(drawSeg.styles.length,Math.max(0,wl.getLatLngs().length-1)); redraw(); });
+  });
+  map.on('pm:drawend',()=>{ if(drawSeg.temp){ map.removeLayer(drawSeg.temp); drawSeg.temp=null; } $('#seg-pick').hidden=true; });
   map.on('contextmenu',e=>{ addPlaceAt(e.latlng); });
   map.on('zoomend',updLbl); updLbl();
   const mapH=()=>map.getContainer().style.setProperty('--map-h',map.getSize().y+'px'); map.on('resize',mapH); mapH();
@@ -757,21 +785,50 @@ function renderStops(){
   }
   if(ui.line&&pts.length>1) L.polyline(pts,{color:col,weight:3,opacity:.75,dashArray:ui.lineSolid?null:'2 8',lineCap:'round',pmIgnore:true,interactive:false}).addTo(stopLayer);
 }
+/* 선 경로의 구간별 모양: seg[i]=1이면 i번째 점과 다음 점 사이가 점선. seg가 없으면 dash 값이 전체에 적용 */
+const DOT='1 11';
+function segOf(x){ const n=Math.max(0,x.latlngs.length-1); return Array.isArray(x.seg)&&x.seg.length===n?x.seg.map(v=>v?1:0):Array(n).fill(x.dash?1:0); }
+function styleOf(x){ if(x.type==='note') return 'solid'; if(x.type!=='line') return x.dash?'dash':'solid'; const g=segOf(x); return g.some(v=>v!==g[0])?'mix':(g[0]?'dash':'solid'); }
+function runLines(latlngs,segs,color){
+  const out=[]; let i=0;
+  while(i<segs.length){ let j=i; while(j+1<segs.length&&segs[j+1]===segs[i]) j++;
+    out.push(L.polyline(latlngs.slice(i,j+2),{color,weight:5,opacity:.85,lineJoin:'round',lineCap:'round',dashArray:segs[i]?DOT:null,interactive:false,pmIgnore:true})); i=j+1; }
+  return out;
+}
+function nearSeg(x,latlng){
+  const p=map.latLngToLayerPoint(latlng); let best=-1, bd=Infinity;
+  for(let i=0;i<x.latlngs.length-1;i++){ const d=L.LineUtil.pointToSegmentDistance(p,map.latLngToLayerPoint(x.latlngs[i]),map.latLngToLayerPoint(x.latlngs[i+1])); if(d<bd){ bd=d; best=i; } }
+  return best;
+}
 function renderDrawLayer(){
   drawLayer.clearLayers(); const d=day(); if(!d) return;
   for(const x of S.drawings.filter(x=>x.date===d.date&&!ui.hid[x.id])){
     let l;
     if(x.type==='note'){ l=L.marker(x.latlngs[0],{icon:L.divIcon({className:'',html:`<div class="pdot" style="--c:${x.color};width:16px;height:16px"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}); if(x.label) l.bindTooltip(esc(x.label),{permanent:true,direction:'right',className:'lbl',offset:[8,0]}); }
     else if(x.type==='polygon'){ l=L.polygon(x.latlngs,{color:x.color,weight:3,fillOpacity:.15,lineCap:'round',dashArray:x.dash?'1 8':null}); }
-    else { l=L.polyline(x.latlngs,{color:x.color,weight:5,opacity:.85,lineJoin:'round',lineCap:'round',dashArray:x.dash?'1 11':null}); }
+    else if(styleOf(x)!=='mix'){ l=L.polyline(x.latlngs,{color:x.color,weight:5,opacity:.85,lineJoin:'round',lineCap:'round',dashArray:styleOf(x)==='dash'?DOT:null}); }
+    else {   // 구간마다 모양이 다르면: 보이는 선은 구간 묶음으로 그리고, 누르기·편집용 투명 선을 위에 얹음
+      l=L.polyline(x.latlngs,{color:x.color,weight:16,opacity:.01,lineJoin:'round'});
+      l._runs=L.layerGroup(runLines(x.latlngs,segOf(x),x.color)).addTo(drawLayer);
+    }
     if((x.label||x.note)&&x.type!=='note') l.bindTooltip(esc(x.label||'')+(x.note?(x.label?'<br>':'')+'<span style="font-weight:400">'+esc(x.note).replace(/\n/g,'<br>')+'</span>':''),{sticky:true,className:'lbl'});
     l._drawId=x.id;
-    l.on('click',ev=>{ if(map.pm.globalEditModeEnabled()||map.pm.globalRemovalModeEnabled()) return; L.DomEvent.stopPropagation(ev); openDraw(x.id); });
+    l.on('click',ev=>{ if(map.pm.globalEditModeEnabled()||map.pm.globalRemovalModeEnabled()) return; L.DomEvent.stopPropagation(ev); openDraw(x.id,false,x.type==='line'&&ev.latlng?nearSeg(x,ev.latlng):-1); });
     l.on('pm:edit pm:dragend',()=>{
       const r=S.drawings.find(z=>z.id===x.id); if(!r) return;
       if(r.type==='note'){const p=l.getLatLng();r.latlngs=[[+p.lat.toFixed(6),+p.lng.toFixed(6)]]}
       else if(r.type==='polygon'){r.latlngs=l.getLatLngs()[0].map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)])}
-      else {r.latlngs=l.getLatLngs().map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)])}
+      else {
+        const old=r.latlngs, nu=l.getLatLngs().map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]);
+        if(Array.isArray(r.seg)&&nu.length!==old.length){   // 편집 중 점을 넣거나 뺐으면 구간 모양도 같은 자리에서 넣거나 뺌
+          let i=0; while(i<old.length&&i<nu.length&&old[i][0]===nu[i][0]&&old[i][1]===nu[i][1]) i++;
+          if(nu.length===old.length+1) r.seg.splice(i,0,r.seg[Math.max(0,Math.min(i-1,r.seg.length-1))]||0);
+          else if(nu.length===old.length-1&&r.seg.length) r.seg.splice(Math.min(i,r.seg.length-1),1);
+          const n=Math.max(0,nu.length-1); while(r.seg.length<n) r.seg.push(r.seg[r.seg.length-1]||0); r.seg.length=n;
+        }
+        r.latlngs=nu;
+        if(l._runs){ drawLayer.removeLayer(l._runs); l._runs=L.layerGroup(runLines(r.latlngs,segOf(r),r.color)).addTo(drawLayer); l.bringToFront(); }
+      }
       r.u=now(); commit(); renderDraw();
     });
     l.addTo(drawLayer);
@@ -837,19 +894,31 @@ $('#note-form').addEventListener('submit',e=>{
 });
 
 /* ---------- dialogs: drawing ---------- */
-let editDraw=null, drawColor=DRAW_COLORS[0], drawIsNew=false;
-function openDraw(id,isNew){
+let editDraw=null, drawColor=DRAW_COLORS[0], drawIsNew=false, editSegs=[], editSegIdx=-1;
+function openDraw(id,isNew,segIdx){
   const x=S.drawings.find(z=>z.id===id); if(!x) return; editDraw=id; drawIsNew=!!isNew;
-  $('#d-label').value=x.label||''; drawColor=x.color; $('#d-note').value=x.note||''; setDrawDash(!!x.dash); $('#d-dash-wrap').hidden=x.type==='note';
+  $('#d-label').value=x.label||''; drawColor=x.color; $('#d-note').value=x.note||''; $('#d-dash-wrap').hidden=x.type==='note';
+  editSegs=x.type==='line'?segOf(x):[x.dash?1:0]; editSegIdx=x.type==='line'&&segIdx>=0&&segIdx<editSegs.length&&editSegs.length>1?segIdx:-1;
+  $('#d-dash-h').textContent=x.type==='line'&&editSegs.length>1?'선 모양 (전체)':'선 모양';
+  $('#d-seg-wrap').hidden=editSegIdx<0; $('#d-seg-h').textContent=editSegIdx<0?'':`누른 구간 (${editSegs.length}개 중 ${editSegIdx+1}번째)`;
+  $('#d-seg-hint').hidden=!(x.type==='line'&&editSegs.length>1&&editSegIdx<0); showSegs();
   $('#d-date').innerHTML=S.days.map(d=>`<option value="${d.date}" ${d.date===x.date?'selected':''}>${fmtDay(d)} (${d.dow}) ${esc(d.label)}</option>`).join('');
   $('#d-colors').innerHTML=DRAW_COLORS.map(c=>`<button type="button" style="--c:${c}" data-c="${c}" aria-pressed="${c===x.color}" aria-label="색 ${c}"></button>`).join('');
   $('#dlg-draw').showModal(); setTimeout(()=>$('#d-label').focus(),50);
 }
-let drawDash=false;
-function setDrawDash(v){ drawDash=!!v; for(const b of $('#d-dash').children) b.setAttribute('aria-pressed',(b.dataset.v==='1')===drawDash); }
-$('#d-dash').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) setDrawDash(b.dataset.v==='1'); });
+function showSegs(){
+  const mixed=editSegs.some(v=>v!==editSegs[0]);   // 섞여 있으면 '전체' 쪽은 아무것도 눌리지 않은 상태로 보여 줌
+  for(const b of $('#d-dash').children) b.setAttribute('aria-pressed',!mixed&&(b.dataset.v==='1')===!!editSegs[0]);
+  if(editSegIdx>=0) for(const b of $('#d-seg').children) b.setAttribute('aria-pressed',(b.dataset.v==='1')===!!editSegs[editSegIdx]);
+}
+$('#d-dash').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; editSegs=editSegs.map(()=>b.dataset.v==='1'?1:0); showSegs(); });
+$('#d-seg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||editSegIdx<0) return; editSegs[editSegIdx]=b.dataset.v==='1'?1:0; showSegs(); });
 $('#d-colors').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;drawColor=b.dataset.c;for(const x of $('#d-colors').children)x.setAttribute('aria-pressed',x===b)});
-$('#draw-form').addEventListener('submit',e=>{e.preventDefault();const x=S.drawings.find(z=>z.id===editDraw);if(!x)return;x.label=$('#d-label').value.trim();x.color=drawColor;x.date=$('#d-date').value;x.note=$('#d-note').value.trim();x.dash=x.type!=='note'&&drawDash;x.u=now();commit();$('#dlg-draw').close();renderAll();});
+$('#draw-form').addEventListener('submit',e=>{e.preventDefault();const x=S.drawings.find(z=>z.id===editDraw);if(!x)return;x.label=$('#d-label').value.trim();x.color=drawColor;x.date=$('#d-date').value;x.note=$('#d-note').value.trim();
+  if(x.type==='note'){ x.dash=false; delete x.seg; }
+  else if(x.type==='line'&&editSegs.length===x.latlngs.length-1&&editSegs.some(v=>v!==editSegs[0])){ x.seg=editSegs.slice(); x.dash=false; }
+  else { delete x.seg; x.dash=!!editSegs[0]; }
+  x.u=now();commit();$('#dlg-draw').close();renderAll();});
 $('#draw-cancel').onclick=()=>$('#dlg-draw').close();
 $('#draw-del').onclick=()=>{ delDrawing(editDraw); $('#dlg-draw').close(); };
 function delDrawing(id){ const rec=S.drawings.find(z=>z.id===id); if(!rec) return; S.drawings=S.drawings.filter(z=>z.id!==id); S.deleted[id]=now(); commit(); renderDrawLayer(); renderDraw(); renderTabs();
