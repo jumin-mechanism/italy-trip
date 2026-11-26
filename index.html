@@ -174,6 +174,8 @@ body.panel-off .panel{display:none}
 .pl{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 0}
 .pl .sw{width:10px;height:10px;border-radius:50%;background:var(--cat)}
 .sub.addr{color:var(--ink);opacity:.82}
+.hidhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:8px;border-top:2px solid var(--line)}
+.hidhead h3{margin:6px 0}
 .plr{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
 .plr .pl{border-bottom:0;flex:1;min-width:0;width:auto}
 .plr.off .pl{opacity:.45}
@@ -406,7 +408,7 @@ dialog::backdrop{background:rgba(10,16,22,.45)}
 <script>
 (function(){
 'use strict';
-const APP_VER='2026.11.26i';
+const APP_VER='2026.11.26j';
 const KEY='italy-trip-2026', TILE_KEY='italy-trip-tiles', THEME_KEY='italy-trip-theme', UI_KEY='italy-trip-ui', META_KEY='italy-trip-meta', SYNC_KEY='italy-trip-sync';
 const CITY={rome:{name:'로마',center:[41.8995,12.4800],zoom:14},florence:{name:'피렌체',center:[43.7700,11.2550],zoom:15},naples:{name:'나폴리',center:[40.8460,14.2560],zoom:15}};
 const CATS=['숙소','식당','디저트·카페','관광','교통','기타'];
@@ -569,13 +571,16 @@ function renderPlaces(){
   const q=ui.q.trim().toLowerCase();
   const list=S.places.filter(p=>p.city===d.city&&(ui.cat==='전체'||p.cat===ui.cat)&&(!q||(p.name+' '+(p.addr||'')+' '+(p.note||'')).toLowerCase().includes(q)));
   const used=new Set(S.items.filter(i=>i.place).map(i=>i.place));
-  const groups=CATS.map(c=>[c,list.filter(p=>p.cat===c)]).filter(g=>g[1].length);
-  $('#place-list').innerHTML=groups.length?groups.map(([c,ps])=>`<div class="group"><h3>${c} · ${ps.length}</h3>${ps.map(p=>`
+  const row=p=>`
     <div class="plr ${ui.hidP[p.id]?'off':''}"><button type="button" class="pl" data-fly="${p.id}" style="--cat:${CAT_COLOR[p.cat]||'#777'}"><span class="sw"></span>
     <span class="nm">${esc(p.name)}${p.addr?`<span class="sub addr">${esc(p.addr)}</span>`:''}${p.note?`<span class="sub">${esc(p.note)}</span>`:''}</span>
-    <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button><button type="button" class="icon-btn" data-pvis="${p.id}" aria-pressed="${!ui.hidP[p.id]}">${ui.hidP[p.id]?'숨김':'보임'}</button></div>`).join('')}</div>`).join(''):'<p class="empty">조건에 맞는 장소가 없어요.</p>';
-  const nh=S.places.filter(p=>p.city===d.city&&ui.hidP[p.id]).length;
-  $('#place-list').insertAdjacentHTML('beforeend',(nh?'<div class="backup" style="margin-top:14px"><span>지도에서 숨긴 장소 '+nh+'곳</span><button type="button" class="icon-btn" data-pvis-all>모두 보이기</button></div>':'')+'<button type="button" class="btn wide" id="open-search">'+(q?'“'+esc(ui.q.trim())+'” 새 장소로 찾아 추가':'+ 새 장소를 이름으로 찾아 추가')+'</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
+    <span class="conf ${p.conf==='미확인'||p.conf==='추정'?'warn':''}">${used.has(p.id)?'일정에 있음':(p.conf==='확인'?'':esc(p.conf||''))}</span></button><button type="button" class="icon-btn" data-pvis="${p.id}" aria-pressed="${!ui.hidP[p.id]}">${ui.hidP[p.id]?'숨김':'보임'}</button></div>`;
+  // 숨긴 장소는 종류와 상관없이 목록 맨 아래에 따로 모음
+  const hidden=list.filter(p=>ui.hidP[p.id]);
+  const groups=CATS.map(c=>[c,list.filter(p=>p.cat===c&&!ui.hidP[p.id])]).filter(g=>g[1].length);
+  $('#place-list').innerHTML=(groups.length?groups.map(([c,ps])=>`<div class="group"><h3>${c} · ${ps.length}</h3>${ps.map(row).join('')}</div>`).join(''):(hidden.length?'':'<p class="empty">조건에 맞는 장소가 없어요.</p>'))+
+    (hidden.length?`<div class="group"><div class="hidhead"><h3>지도에서 숨긴 장소 · ${hidden.length}</h3><button type="button" class="icon-btn" data-pvis-all>모두 보이기</button></div>${hidden.map(row).join('')}</div>`:'');
+  $('#place-list').insertAdjacentHTML('beforeend','<button type="button" class="btn wide" id="open-search">'+(q?'“'+esc(ui.q.trim())+'” 새 장소로 찾아 추가':'+ 새 장소를 이름으로 찾아 추가')+'</button><p class="help" style="margin-top:12px">지도에서 길게 누르거나(폰) 오른쪽 클릭(PC)해도 그 자리에 장소가 추가돼요.</p>');
 }
 function renderDraw(){
   const d=day(); if(!d) return;
