@@ -1,0 +1,40 @@
+# 로마·피렌체·나폴리 지도 파일(map/*.pmtiles)을 만들어 저장소에 올립니다.
+# Actions 탭 → "지도 파일 만들기" → Run workflow 로 한 번 실행하면 됩니다.
+name: 지도 파일 만들기
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: pmtiles 도구 받기
+        run: curl -sfL https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz | tar xz pmtiles
+      - name: 가장 최근 지도 찾기
+        id: src
+        run: |
+          for i in $(seq 0 30); do
+            d=$(date -u -d "-$i day" +%Y%m%d)
+            u="https://build.protomaps.com/$d.pmtiles"
+            if curl -sf -r 0-6 -o /dev/null "$u"; then
+              echo "url=$u" >> "$GITHUB_OUTPUT"; echo "지도 날짜: $d"; exit 0
+            fi
+          done
+          echo "최근 30일 안의 지도 파일을 찾지 못했습니다. https://maps.protomaps.com/builds/ 를 확인하세요."; exit 1
+      - name: 지도 잘라내기
+        run: |
+          ./pmtiles extract "${{ steps.src.outputs.url }}" map/overview.pmtiles --bbox=10.9,40.4,14.9,44.1 --maxzoom=10
+          ./pmtiles extract "${{ steps.src.outputs.url }}" map/cities.pmtiles --region=map/regions.geojson --maxzoom=15
+          ls -lh map/*.pmtiles
+          for f in map/*.pmtiles; do
+            if [ "$(stat -c%s "$f")" -gt 95000000 ]; then echo "$f 이(가) 95MB를 넘어 GitHub에 올릴 수 없습니다. map/regions.geojson 범위를 줄이세요."; exit 1; fi
+          done
+      - name: 저장소에 올리기
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add map/overview.pmtiles map/cities.pmtiles
+          git diff --cached --quiet && { echo "바뀐 내용이 없습니다."; exit 0; }
+          git commit -m "지도 파일 갱신"
+          git push
